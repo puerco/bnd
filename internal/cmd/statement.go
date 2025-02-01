@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,22 +16,18 @@ import (
 )
 
 type statementOptions struct {
-	Sign bool
+	signOptions
 }
 
 // Validates the options in context with arguments
 func (so *statementOptions) Validate() error {
-	return nil
+	errs := []error{}
+	errs = append(errs, so.signOptions.Validate())
+	return errors.Join(errs...)
 }
 
-func (o *statementOptions) AddFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().BoolVarP(
-		&o.Sign,
-		"sign",
-		"s",
-		true,
-		"bind an unsigned in-toto attestation",
-	)
+func (so *statementOptions) AddFlags(cmd *cobra.Command) {
+	so.signOptions.AddFlags(cmd)
 }
 
 func addStatement(parentCmd *cobra.Command) {
