@@ -14,16 +14,16 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-type attestationOptions struct {
+type statementOptions struct {
 	Sign bool
 }
 
 // Validates the options in context with arguments
-func (ao *attestationOptions) Validate() error {
+func (so *statementOptions) Validate() error {
 	return nil
 }
 
-func (o *attestationOptions) AddFlags(cmd *cobra.Command) {
+func (o *statementOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVarP(
 		&o.Sign,
 		"sign",
@@ -33,12 +33,12 @@ func (o *attestationOptions) AddFlags(cmd *cobra.Command) {
 	)
 }
 
-func addAttestation(parentCmd *cobra.Command) {
-	opts := attestationOptions{}
+func addStatement(parentCmd *cobra.Command) {
+	opts := statementOptions{}
 	attCmd := &cobra.Command{
-		Short:             fmt.Sprintf("%s attestation: binds an attestation into a signed bundle", appname),
-		Use:               "attestation",
-		Example:           fmt.Sprintf("%s attestation file.intoto.json ", appname),
+		Short:             fmt.Sprintf("%s statement: binds an in-toto attestation in a signed bundle", appname),
+		Use:               "statement",
+		Example:           fmt.Sprintf("%s statement file.intoto.json ", appname),
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
@@ -51,18 +51,18 @@ func addAttestation(parentCmd *cobra.Command) {
 			var f io.Reader
 			f, err := os.Open(args[0])
 			if err != nil {
-				return fmt.Errorf("opening attestation file")
+				return fmt.Errorf("opening statement file")
 			}
 
 			attData, err := io.ReadAll(f)
 			if err != nil {
-				return fmt.Errorf("reading attestation data: %s", err)
+				return fmt.Errorf("reading statement data: %s", err)
 			}
 
 			signer := bundle.NewSigner()
 			bundle, err := signer.SignAndBind(ctx, attData)
 			if err != nil {
-				return fmt.Errorf("binding attestation: %w", err)
+				return fmt.Errorf("binding statement: %w", err)
 			}
 
 			o := os.Stdout
