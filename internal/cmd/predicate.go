@@ -1,0 +1,180 @@
+// SPDX-FileCopyrightText: Copyright 2025 Carabiner Systems, Inc
+// SPDX-License-Identifier: Apache-2.0
+
+package cmd
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/carabiner-dev/bind/pkg/bundle"
+	v1 "github.com/in-toto/attestation/go/v1"
+	"github.com/puerco/ampel/pkg/attestation"
+	"github.com/puerco/ampel/pkg/formats/predicate"
+	"github.com/puerco/ampel/pkg/formats/statement/intoto"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+)
+
+type predicateOptions struct {
+	signOptions
+	PredicateType    string
+	PredicatePath    string
+	SubjectHashes    []string
+	SubjectPaths     []string
+	SubjectAlgorithm string
+}
+
+// Validates the options in context with arguments
+func (po *predicateOptions) Validate() error {
+	errs := []error{}
+	errs = append(errs, po.signOptions.Validate())
+
+	if len(po.SubjectHashes) == 0 {
+		errs = append(errs, errors.New("no subjects specified"))
+	}
+	return errors.Join(errs...)
+}
+
+// AddFlags adds the subcommands flags
+func (po *predicateOptions) AddFlags(cmd *cobra.Command) {
+	po.signOptions.AddFlags(cmd)
+	cmd.PersistentFlags().StringSliceVarP(
+		&po.SubjectHashes,
+		"subject",
+		"s",
+		[]string{},
+		"list of hashes to include ",
+	)
+
+	cmd.PersistentFlags().StringVarP(
+		&po.PredicateType,
+		"type",
+		"t",
+		"",
+		"predicatre type to declare in the attestation (defaults to autodetect)",
+	)
+
+	cmd.PersistentFlags().StringVarP(
+		&po.PredicatePath,
+		"predicate",
+		"p",
+		"",
+		"path to the json predicate data file",
+	)
+
+	cmd.PersistentFlags().StringVar(
+		&po.PredicatePath,
+		"hash-algo",
+		"sha256",
+		"algorithm used to hash the subjects",
+	)
+}
+
+var defaultPredicateOpts = predicateOptions{
+	signOptions: signOptions{
+		Sign: true,
+	},
+	SubjectAlgorithm: "sha256",
+}
+
+func addPredicate(parentCmd *cobra.Command) {
+	opts := defaultPredicateOpts
+	attCmd := &cobra.Command{
+		Short:             "packs a new attestation into a bundle from a JSON predicate",
+		Use:               "predicate",
+		Example:           fmt.Sprintf(`%s predicate --type="example.com/v1" --subject-hash=abc123 data.json`, appname),
+		SilenceUsage:      false,
+		SilenceErrors:     true,
+		PersistentPreRunE: initLogging,
+		RunE: func(_ *cobra.Command, args []string) error {
+			ctx := context.Background()
+			if len(args) == 0 && opts.PredicatePath == "" {
+				return fmt.Errorf("no predicate file specified")
+			}
+
+			if len(args) > 0 && opts.PredicatePath != "" {
+				opts.PredicatePath = args[0]
+			}
+
+			if len(args) > 0 && args[0] != opts.PredicatePath {
+				return fmt.Errorf("predicate specified twice (-p and argument)")
+			}
+
+			// Validate the options
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+
+			var f io.Reader
+			f, err := os.Open(opts.PredicatePath)
+			if err != nil {
+				return fmt.Errorf("opening predicate file")
+			}
+
+			predData, err := io.ReadAll(f)
+			if err != nil {
+				return fmt.Errorf("reading predicate data: %s", err)
+			}
+
+			optFn := []predicate.ParseOption{}
+			if opts.PredicateType != "" {
+				optFn = append(optFn, predicate.WithTypeHints(
+					[]attestation.PredicateType{
+						attestation.PredicateType(opts.PredicateType),
+					}),
+				)
+			}
+			pred, err := predicate.Parsers.Parse(predData, optFn...)
+			if err != nil {
+				return fmt.Errorf("parsing predicate data: %w", err)
+			}
+
+			// Create the new attestation
+			statement := intoto.NewStatement(intoto.WithPredicate(pred))
+
+			// Add the attestation subjects
+			for _, s := range opts.SubjectHashes {
+				statement.Subject = append(statement.Subject, &v1.ResourceDescriptor{
+					Digest: map[string]string{
+						opts.SubjectAlgorithm: s,
+					},
+				})
+			}
+
+			// Marshal the attestation data
+			attData, err := statement.ToJson()
+			if err != nil {
+				return fmt.Errorf("marshaling statement json: %w", err)
+			}
+
+			logrus.Debugf("ATTESTATION:\n%s\n/ATTESTATION\n", string(attData))
+
+			signer := bundle.NewSigner()
+			bundle, err := signer.SignAndBind(ctx, attData)
+			if err != nil {
+				return fmt.Errorf("binding statement: %w", err)
+			}
+
+			o := os.Stdout
+
+			// enc := json.NewEncoder(o)
+			data, err := protojson.Marshal(bundle)
+			if err != nil {
+				return fmt.Errorf("marshaling bundle: %w", err)
+			}
+
+			if _, err := o.Write(data); err != nil {
+				return fmt.Errorf("writing bundle data: %w", err)
+			}
+
+			return nil
+		},
+	}
+	opts.AddFlags(attCmd)
+	parentCmd.AddCommand(attCmd)
+}

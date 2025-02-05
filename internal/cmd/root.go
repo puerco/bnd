@@ -51,6 +51,7 @@ func init() {
 		fmt.Sprintf("the logging verbosity, either %s", log.LevelNames()),
 	)
 	addStatement(rootCmd)
+	addPredicate(rootCmd)
 	addExtract(rootCmd)
 	addInspect(rootCmd)
 	addVerify(rootCmd)
