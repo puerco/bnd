@@ -30,6 +30,6 @@ func (pfo *predicateFileOptions) AddFlags(cmd *cobra.Command) {
 		&pfo.ConvertYAML,
 		"yaml",
 		false,
-		"convert a yaml file to JSON before attesting it",
+		"create the predicate by generaically converting a YAML file to JSON",
 	)
 }

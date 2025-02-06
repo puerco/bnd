@@ -76,14 +76,29 @@ func (co *commitOptions) AddFlags(cmd *cobra.Command) {
 	)
 
 	cmd.PersistentFlags().StringVar(
-		&co.PredicateGitPath, "git-predicate", "", "url of the repository to clone",
+		&co.PredicateGitPath, "git-predicate", "", "path to the predicate in the local repo",
 	)
 }
 
 func addCommit(parentCmd *cobra.Command) {
 	opts := commitOptions{}
 	commitCmd := &cobra.Command{
-		Short:             "attests to data of a commit",
+		Short: "attests to data of a commit",
+		Long: fmt.Sprintf(`
+🥨 %s commit
+
+The commit subcommand generates statments about git commits. This lets
+tools create attestations about the status of a repo at a point in time.
+
+This is not intended to replace commit signing tools such as gittuf or
+gitsign but rather to make it easy to associate predicates with a repository's
+history.
+
+The predicate data can be read from commited files or can be supplied externally.
+The commit subcommmand can clone local or remote repositories. It can also
+resolve tags, generating the subjects aty their current hash.
+
+	`, appname),
 		Use:               "commit",
 		Example:           fmt.Sprintf(`%s commit --type="example.com/v1" --tag=v1.0.0 --from`, appname),
 		SilenceUsage:      false,
@@ -182,7 +197,6 @@ func addCommit(parentCmd *cobra.Command) {
 
 			o := os.Stdout
 
-			// enc := json.NewEncoder(o)
 			data, err := protojson.Marshal(bundle)
 			if err != nil {
 				return fmt.Errorf("marshaling bundle: %w", err)
