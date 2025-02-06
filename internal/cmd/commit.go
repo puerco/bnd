@@ -25,6 +25,7 @@ import (
 type commitOptions struct {
 	predicateFileOptions
 	signOptions
+	outFileOptions
 	RepoURL          string
 	RepoPath         string
 	Sha              string
@@ -37,6 +38,7 @@ func (co *commitOptions) Validate() error {
 	errs := []error{}
 	errs = append(errs, co.signOptions.Validate())
 	errs = append(errs, co.predicateFileOptions.Validate())
+	errs = append(errs, co.outFileOptions.Validate())
 
 	if co.Sha != "" && co.Tag != "" {
 		errs = append(errs, errors.New("only tag or commit hash can be specified at the same time"))
@@ -61,8 +63,8 @@ func (co *commitOptions) Validate() error {
 func (co *commitOptions) AddFlags(cmd *cobra.Command) {
 	co.signOptions.AddFlags(cmd)
 	co.predicateFileOptions.AddFlags(cmd)
+	co.outFileOptions.AddFlags(cmd)
 
-	// po.signOptions.AddFlags(cmd)
 	cmd.PersistentFlags().StringVar(
 		&co.Sha, "sha", "", "commit hash to attest (defaults to HEAD of main branch)",
 	)
@@ -96,9 +98,13 @@ history.
 
 The predicate data can be read from commited files or can be supplied externally.
 The commit subcommmand can clone local or remote repositories. It can also
-resolve tags, generating the subjects aty their current hash.
+resolve tags, generating the correct subjects with their current hash.
 
-	`, appname),
+Note that %s commit always clones the repo, even when operating on local 
+repositories from disk. The purpose is to avoid messing up you environment as
+the commit subcommand moves HEAD around.
+
+	`, appname, appname),
 		Use:               "commit",
 		Example:           fmt.Sprintf(`%s commit --type="example.com/v1" --tag=v1.0.0 --from`, appname),
 		SilenceUsage:      false,
@@ -195,12 +201,16 @@ resolve tags, generating the subjects aty their current hash.
 				return fmt.Errorf("binding statement: %w", err)
 			}
 
-			o := os.Stdout
-
 			data, err := protojson.Marshal(bundle)
 			if err != nil {
 				return fmt.Errorf("marshaling bundle: %w", err)
 			}
+
+			o, closer, err := opts.OutputWriter()
+			if err != nil {
+				return err
+			}
+			defer closer()
 
 			if _, err := o.Write(data); err != nil {
 				return fmt.Errorf("writing bundle data: %w", err)
