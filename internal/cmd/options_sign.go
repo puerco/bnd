@@ -15,9 +15,6 @@ func (so *signOptions) Validate() error {
 
 func (so *signOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVar(
-		&so.Sign,
-		"sign",
-		true,
-		"trigger the signing process",
+		&so.Sign, "sign", true, "trigger the signing process",
 	)
 }

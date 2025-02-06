@@ -7,25 +7,33 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/carabiner-dev/bind/pkg/bundle"
+	"github.com/carabiner-dev/bind/pkg/bind"
 	"github.com/spf13/cobra"
 )
 
 type verifyOptions struct {
+	sigstoreOptions
+	verifcationOptions
 	bundleOptions
 }
 
 // Validates the options in context with arguments
 func (o *verifyOptions) Validate() error {
 	return errors.Join(
+		o.sigstoreOptions.Validate(),
+		o.verifcationOptions.Validate(),
 		o.bundleOptions.Validate(),
 	)
 }
 
+// AddFlags adds the flags to the subcommand
 func (o *verifyOptions) AddFlags(cmd *cobra.Command) {
+	o.verifcationOptions.AddFlags(cmd)
 	o.bundleOptions.AddFlags(cmd)
+	o.sigstoreOptions.AddFlags(cmd)
 }
 
+// addVerify adds the verification command
 func addVerify(parentCmd *cobra.Command) {
 	opts := verifyOptions{}
 	verifyCmd := &cobra.Command{
@@ -35,37 +43,33 @@ func addVerify(parentCmd *cobra.Command) {
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
-		RunE: func(_ *cobra.Command, args []string) error {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				if err := opts.SetBundlePath(args[0]); err != nil {
 					return err
 				}
 			}
-
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
 
-			reader, closer, err := opts.OpenBundle()
-			if err != nil {
-				return fmt.Errorf("opening bundle: %w", err)
+			// Silence usage here as options are validated
+			cmd.SilenceUsage = true
+
+			verifier := bind.NewVerifier()
+			verifier.Options = bind.VerificationOptions{
+				TufRootURL:       opts.TufRootURL,
+				TufRootPath:      opts.TufRootPath,
+				RequireCTlog:     opts.RequireCTlog,
+				RequireTimestamp: opts.RequireTimestamp,
+				RequireTlog:      opts.RequireTlog,
 			}
-			defer closer()
-
-			tool := bundle.NewTool()
-
-			b, err := tool.ParseBundle(reader)
+			result, err := verifier.VerifyBundle(opts.Path)
 			if err != nil {
-				return fmt.Errorf("parsing bundle: %w", err)
-			}
-
-			ok, result, err := tool.Verify(b)
-			if err != nil {
-				return fmt.Errorf("verifying bundle: %w", err)
-			}
-
-			if !ok {
-				return fmt.Errorf("bundle verification failed")
+				return fmt.Errorf("error verifying bundle: %w", err)
 			}
 
 			fmt.Printf("%+v", result)
