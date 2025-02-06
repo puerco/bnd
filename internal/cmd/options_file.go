@@ -17,11 +17,7 @@ type outFileOptions struct {
 
 func (o *outFileOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVarP(
-		&o.OutPath,
-		"out",
-		"o",
-		"",
-		"file path to write the output to (default STDOUT)",
+		&o.OutPath, "out", "o", "", "file path to write the output to (default STDOUT)",
 	)
 }
 

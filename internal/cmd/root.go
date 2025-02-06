@@ -56,6 +56,7 @@ func init() {
 	addInspect(rootCmd)
 	addVerify(rootCmd)
 	addPush(rootCmd)
+	addCommit(rootCmd)
 	rootCmd.AddCommand(version.WithFont("doom"))
 }
 

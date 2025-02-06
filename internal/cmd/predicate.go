@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,13 +18,13 @@ import (
 	"github.com/puerco/ampel/pkg/formats/statement/intoto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert/yaml"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type predicateOptions struct {
 	signOptions
-	PredicateType    string
-	PredicatePath    string
+	predicateFileOptions
 	SubjectHashes    []string
 	SubjectPaths     []string
 	SubjectAlgorithm string
@@ -33,6 +34,7 @@ type predicateOptions struct {
 func (po *predicateOptions) Validate() error {
 	errs := []error{}
 	errs = append(errs, po.signOptions.Validate())
+	errs = append(errs, po.predicateFileOptions.Validate())
 
 	if len(po.SubjectHashes) == 0 {
 		errs = append(errs, errors.New("no subjects specified"))
@@ -43,6 +45,8 @@ func (po *predicateOptions) Validate() error {
 // AddFlags adds the subcommands flags
 func (po *predicateOptions) AddFlags(cmd *cobra.Command) {
 	po.signOptions.AddFlags(cmd)
+	po.predicateFileOptions.AddFlags(cmd)
+
 	cmd.PersistentFlags().StringSliceVarP(
 		&po.SubjectHashes,
 		"subject",
@@ -51,24 +55,8 @@ func (po *predicateOptions) AddFlags(cmd *cobra.Command) {
 		"list of hashes to include ",
 	)
 
-	cmd.PersistentFlags().StringVarP(
-		&po.PredicateType,
-		"type",
-		"t",
-		"",
-		"predicatre type to declare in the attestation (defaults to autodetect)",
-	)
-
-	cmd.PersistentFlags().StringVarP(
-		&po.PredicatePath,
-		"predicate",
-		"p",
-		"",
-		"path to the json predicate data file",
-	)
-
 	cmd.PersistentFlags().StringVar(
-		&po.PredicatePath,
+		&po.SubjectAlgorithm,
 		"hash-algo",
 		"sha256",
 		"algorithm used to hash the subjects",
@@ -113,12 +101,19 @@ func addPredicate(parentCmd *cobra.Command) {
 			var f io.Reader
 			f, err := os.Open(opts.PredicatePath)
 			if err != nil {
-				return fmt.Errorf("opening predicate file")
+				return fmt.Errorf("opening predicate file: %w", err)
 			}
 
 			predData, err := io.ReadAll(f)
 			if err != nil {
 				return fmt.Errorf("reading predicate data: %s", err)
+			}
+
+			if opts.ConvertYAML {
+				predData, err = convertYaml(predData)
+				if err != nil {
+					return err
+				}
 			}
 
 			optFn := []predicate.ParseOption{}
@@ -177,4 +172,18 @@ func addPredicate(parentCmd *cobra.Command) {
 	}
 	opts.AddFlags(attCmd)
 	parentCmd.AddCommand(attCmd)
+}
+
+func convertYaml(in []byte) ([]byte, error) {
+	var datamap = &map[string]any{}
+	if err := yaml.Unmarshal(in, datamap); err != nil {
+		return nil, fmt.Errorf("parsing predicate YAML")
+	}
+
+	// Marshal to JSON again
+	jsondata, err := json.Marshal(datamap)
+	if err != nil {
+		return nil, fmt.Errorf("marshalling jsondata: %w", err)
+	}
+	return jsondata, nil
 }
