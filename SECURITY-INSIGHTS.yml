@@ -1,0 +1,39 @@
+---
+header:
+  schema-version: 2.0.0
+  last-updated: '2025-02-06'
+  last-reviewed: '2025-02-06'
+  url: https://carabiner.dev/projects/bind
+
+project:
+  name: Bind
+  administrators:
+    - name: Puerco
+      affiliation: Carabiner Systems
+      email: puerco@carabiner.dev
+      primary: true
+  vulnerability-reporting:
+    reports-accepted: true
+    bug-bounty-available: false
+
+repository:
+  url: https://github.com/carabiner-dev/bind
+  status: active
+  accepts-change-request: true
+  accepts-automated-change-request: true
+  core-team:
+    - name: Puerco
+      affiliation: Carabiner Systems, Inc
+      email: puerco@carabiner.dev
+      primary: true
+  license:
+    expression: Apache-2.0
+  documentation:
+    contributing-guide: ""
+    review-policy: ""
+    security-policy: ""
+    governance: ""
+    dependency-management-policy: ""
+  distribution-points:
+    - uri:  https://github.com/carabiner-dev/bind/releases
+      comment: GitHub Release Page
