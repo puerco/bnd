@@ -4,34 +4,48 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/carabiner-dev/bind/pkg/bundle"
+	"github.com/carabiner-dev/bind/pkg/bind"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type statementOptions struct {
 	signOptions
+	sigstoreOptions
+	outFileOptions
+	StatementPath string
 }
 
 // Validates the options in context with arguments
 func (so *statementOptions) Validate() error {
 	errs := []error{}
 	errs = append(errs, so.signOptions.Validate())
+	errs = append(errs, so.outFileOptions.Validate())
+	errs = append(errs, so.sigstoreOptions.Validate())
+
+	if so.StatementPath == "" {
+		errs = append(errs, errors.New("attestation path is empty"))
+	}
 	return errors.Join(errs...)
 }
 
 func (so *statementOptions) AddFlags(cmd *cobra.Command) {
 	so.signOptions.AddFlags(cmd)
+	so.outFileOptions.AddFlags(cmd)
+	so.sigstoreOptions.AddFlags(cmd)
+
+	cmd.PersistentFlags().StringVarP(
+		&so.StatementPath, "statement", "s", "",
+		"Path to the in-toto statement file",
+	)
 }
 
 func addStatement(parentCmd *cobra.Command) {
-	opts := statementOptions{}
+	opts := &statementOptions{}
 	attCmd := &cobra.Command{
 		Short:             fmt.Sprintf("%s statement: binds an in-toto attestation in a signed bundle", appname),
 		Use:               "statement",
@@ -39,14 +53,22 @@ func addStatement(parentCmd *cobra.Command) {
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 && opts.StatementPath != "" {
+				return errors.New("statement path specified twice (positional argument and flag)")
+			}
+			if len(args) > 0 {
+				opts.StatementPath = args[0]
+			}
+			return nil
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			ctx := context.Background()
-			if len(args) == 0 {
-				return fmt.Errorf("no attestation file specified")
+			if err := opts.Validate(); err != nil {
+				return fmt.Errorf("validating options: %w", err)
 			}
 
 			var f io.Reader
-			f, err := os.Open(args[0])
+			f, err := os.Open(opts.StatementPath)
 			if err != nil {
 				return fmt.Errorf("opening statement file")
 			}
@@ -56,24 +78,24 @@ func addStatement(parentCmd *cobra.Command) {
 				return fmt.Errorf("reading statement data: %s", err)
 			}
 
-			signer := bundle.NewSigner()
-			bundle, err := signer.SignAndBind(ctx, attData)
+			signer := bind.NewSigner()
+			signer.Options.TufRootPath = opts.TufRootPath
+			signer.Options.TufRootURL = opts.TufRootURL
+
+			bundle, err := signer.SignStatement(attData)
 			if err != nil {
-				return fmt.Errorf("binding statement: %w", err)
+				return fmt.Errorf("writing signing statement: %w", err)
 			}
 
-			o := os.Stdout
-
-			// enc := json.NewEncoder(o)
-			data, err := protojson.Marshal(bundle)
+			o, closer, err := opts.OutputWriter()
 			if err != nil {
-				return fmt.Errorf("marshaling bundle: %w", err)
+				return fmt.Errorf("getting output stream: %w", err)
 			}
+			defer closer()
 
-			if _, err := o.Write(data); err != nil {
-				return fmt.Errorf("writing bundle data: %w", err)
+			if err := signer.WriteBundle(bundle, o); err != nil {
+				return err
 			}
-
 			return nil
 		},
 	}
