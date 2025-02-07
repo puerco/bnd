@@ -10,6 +10,8 @@ import (
 	"github.com/theupdateframework/go-tuf/v2/metadata/fetcher"
 )
 
+const SigstorePublicGoodBaseURL = "https://tuf-repo-cdn.sigstore.dev"
+
 // BindTufOptions captures the TUF options handled by bind
 type BindTufOptions struct {
 	Fetcher     fetcher.Fetcher
@@ -53,4 +55,11 @@ func GetTufRoot(opts *BindTufOptions) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+// defaultfetcher returns a default TUF fetcher configured with the bind UA
+func defaultfetcher() fetcher.Fetcher {
+	f := fetcher.DefaultFetcher{}
+	f.SetHTTPUserAgent("bind/v1.0.0")
+	return &f
 }

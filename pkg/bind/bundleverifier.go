@@ -13,7 +13,15 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/verify"
 )
 
-// bundleVerifier implements the BundleVerifier interface
+// BundleVerifier abstracts the verification implementation to make it easy to
+// mock for testing.
+type BundleVerifier interface {
+	OpenBundle(string) (*bundle.Bundle, error)
+	BuildSigstoreVerifier(*VerificationOptions) (VerifyCapable, error)
+	RunVerification(VerifyCapable, *bundle.Bundle) (*verify.VerificationResult, error)
+}
+
+// bundleVerifier implements the BundleVerifier interface.
 type bundleVerifier struct{}
 
 // OpenBundle opens a bundle file

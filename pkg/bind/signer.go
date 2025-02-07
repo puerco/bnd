@@ -4,13 +4,10 @@
 package bind
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	"github.com/sigstore/sigstore-go/pkg/sign"
-	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -26,55 +23,6 @@ func NewSigner() *Signer {
 type Signer struct {
 	Options      SignerOptions
 	bundleSigner BundleSigner
-}
-
-var defaultSignerOptions = SignerOptions{
-	BindTufOptions: BindTufOptions{
-		TufRootURL:  SigstorePublicGoodBaseURL,
-		TufRootPath: "",
-		Fetcher:     defaultfetcher(),
-	},
-	Timestamp:     true,
-	AppendToRekor: true,
-
-	OidcRedirectURL: "http://localhost:0/auth/callback",
-	OidcIssuer:      "https://oauth2.sigstore.dev/auth",
-	OidcClientID:    "sigstore",
-}
-
-// SignerOptions
-type SignerOptions struct {
-	BindTufOptions
-	Token         *oauthflow.OIDCIDToken
-	Timestamp     bool
-	AppendToRekor bool
-	DisableSTS    bool
-
-	// OidcRedirectURL defines the URL that the browser will redirect to.
-	// if the port is set to 0, bind will randomizr it to a high number
-	// port before starting the OIDC flow.
-	OidcRedirectURL  string
-	OidcIssuer       string
-	OidcClientID     string
-	OidcClientSecret string
-}
-
-func (so *SignerOptions) Validate() error {
-	errs := []error{}
-	if so.OidcIssuer == "" {
-		errs = append(errs, errors.New("OIDC issuer not set"))
-	}
-
-	if so.OidcClientID == "" {
-		errs = append(errs, errors.New("OIDC client not set"))
-	}
-
-	if so.OidcRedirectURL == "" {
-		errs = append(errs, errors.New("OIDC redirect URL not set"))
-	}
-	// opts.OidcClientSecret
-
-	return errors.Join(errs...)
 }
 
 // WriteBundle writes the bundle JSON to
@@ -132,14 +80,4 @@ func (s *Signer) SignStatement(data []byte) (*v1.Bundle, error) {
 		return nil, fmt.Errorf("singing statement: %w", err)
 	}
 	return bndl, nil
-}
-
-type BundleSigner interface {
-	VerifyContent(*SignerOptions, []byte) error
-	WrapStatement([]byte) *sign.DSSEData
-	GetKeyPair(*SignerOptions) (*sign.EphemeralKeypair, error)
-	GetAmbienTokens(*SignerOptions) error
-	GetOidcToken(*SignerOptions) error
-	BuildSigstoreSignerOptions(*SignerOptions) (*sign.BundleOptions, error)
-	SignBundle(content sign.Content, keypair sign.Keypair, opts sign.BundleOptions) (*v1.Bundle, error)
 }

@@ -20,6 +20,17 @@ import (
 	"golang.org/x/term"
 )
 
+// BundleSigner abstracts the signer implementation to make it easy to mock
+type BundleSigner interface {
+	VerifyContent(*SignerOptions, []byte) error
+	WrapStatement([]byte) *sign.DSSEData
+	GetKeyPair(*SignerOptions) (*sign.EphemeralKeypair, error)
+	GetAmbienTokens(*SignerOptions) error
+	GetOidcToken(*SignerOptions) error
+	BuildSigstoreSignerOptions(*SignerOptions) (*sign.BundleOptions, error)
+	SignBundle(content sign.Content, keypair sign.Keypair, opts sign.BundleOptions) (*v1.Bundle, error)
+}
+
 // bundleSigner implements the BundleSigner interface for the signer
 type bundleSigner struct{}
 
