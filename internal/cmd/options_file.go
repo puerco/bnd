@@ -58,10 +58,7 @@ func (o *bundleOptions) Validate() error {
 func (o *bundleOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVarP(
 		&o.Path,
-		"bundle",
-		"b",
-		"",
-		"path to the bundle file",
+		"bundle", "b", "", "path to the bundle file",
 	)
 }
 

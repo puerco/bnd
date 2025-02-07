@@ -29,22 +29,34 @@ func (o *inspectOptions) AddFlags(cmd *cobra.Command) {
 func addInspect(parentCmd *cobra.Command) {
 	opts := inspectOptions{}
 	extractCmd := &cobra.Command{
-		Short:             "prints useful information about a bundle",
+		Short: "prints useful information about a bundle",
+		Long: fmt.Sprintf(`
+🥨 %s inspect:  Inspect the contents of bundled attestations
+
+This command is a work in progress. For now it just prints minimal
+data about the bundle.
+
+		`, appname),
 		Use:               "inspect",
 		Example:           fmt.Sprintf("%s inspect bundle.json ", appname),
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
-		RunE: func(_ *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				if err := opts.SetBundlePath(args[0]); err != nil {
-					return err
-				}
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 && opts.bundleOptions.Path != "" && opts.bundleOptions.Path != args[0] {
+				return errors.New("bundle paths specified twice (as argument and flag)")
 			}
-
+			if len(args) > 0 {
+				opts.bundleOptions.Path = args[0]
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
+
+			cmd.SilenceUsage = true
 
 			reader, closer, err := opts.OpenBundle()
 			if err != nil {

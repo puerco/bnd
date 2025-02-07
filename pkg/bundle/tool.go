@@ -11,7 +11,7 @@ import (
 
 	// "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
+	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 
 	//"github.com/sigstore/rekor/pkg/types/intoto"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
@@ -25,19 +25,17 @@ func NewTool() *Tool {
 
 // Parse reades the budle data from reader r and decodes it into
 func (t *Tool) ParseBundle(r io.Reader) (*protobundle.Bundle, error) {
-	var bundle = &protobundle.Bundle{
-		VerificationMaterial: &protobundle.VerificationMaterial{
-			Content:                   &protobundle.VerificationMaterial_X509CertificateChain{},
-			TlogEntries:               []*v1.TransparencyLogEntry{},
-			TimestampVerificationData: &protobundle.TimestampVerificationData{},
-		},
-		Content: &protobundle.Bundle_DsseEnvelope{},
+	var bndl sbundle.Bundle
+	bndl.Bundle = new(protobundle.Bundle)
+
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("reading bundle data: %w", err)
 	}
-	dec := json.NewDecoder(r)
-	if err := dec.Decode(bundle); err != nil {
-		return nil, fmt.Errorf("deconding bundle: %w", err)
+	if err := bndl.UnmarshalJSON(data); err != nil {
+		return nil, fmt.Errorf("unmarshalling bundle JSON: %w", err)
 	}
-	return bundle, nil
+	return bndl.Bundle, nil
 }
 
 // getBundleContentIfDSSE returns the bundle contents if it is wrapped in a DSSE
@@ -131,10 +129,4 @@ func (t *Tool) ExtractAttestationJSON(bundle *protobundle.Bundle) ([]byte, error
 	}
 
 	return dssePayload.DsseEnvelope.Payload, nil
-}
-
-type VerificationResults struct{}
-
-func (t *Tool) Verify(*protobundle.Bundle) (bool, *VerificationResults, error) {
-	return false, nil, nil
 }
