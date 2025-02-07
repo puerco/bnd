@@ -33,12 +33,21 @@ their contents.
 Create a new bundle by signing and bundling an attestation and its verification
 material:
 
-	%s statement --out=bundle.json statement.intoto.json
+  %s statement --out=bundle.json statement.intoto.json
 
 Inspect the resulting bundle:
 
-	%s inspect bundle.json
-	`, appname, appname),
+  %s inspect bundle.json
+
+Extract the in-toto attestation from the bundle:
+
+  %s extract attestation bundle.json
+
+Extract the predicate data from the bundle:
+
+  %s extract predicate bundle.json
+
+	`, appname, appname, appname, appname),
 }
 
 type commandLineOptions struct {

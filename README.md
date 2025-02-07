@@ -28,6 +28,14 @@ Inspect the resulting bundle:
 
 	bind inspect bundle.json
 	
+Extract the in-toto attestation from the bundle:
+
+  bind extract attestation bundle.json
+
+Extract the predicate data from the bundle:
+
+  bind extract predicate bundle.json
+
 
 Available Commands:
   commit      attests to data of a commit
@@ -46,5 +54,10 @@ Flags:
       --log-level string   the logging verbosity, either 'panic', 'fatal', 'error', 'warning', 'info', 'debug', 'trace' (default "info")
 
 Use "bind [command] --help" for more information about a command.
-
 ```
+
+## Native Sigstore Signing
+
+`bind` implements sigstore keyless signing just as cosign does. It supports the
+interactive and device flows as well as limited initial support for ambient
+credentials (initaially GitHub actions tokens).
