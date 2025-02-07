@@ -213,3 +213,15 @@ func (bs *bundleSigner) GetAmbienTokens(opts *SignerOptions) error {
 	}
 	return nil
 }
+
+type oidcConnector interface {
+	OIDConnect(string, string, string, string) (*oauthflow.OIDCIDToken, error)
+}
+
+type realConnector struct {
+	flow oauthflow.TokenGetter
+}
+
+func (rf *realConnector) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
+	return oauthflow.OIDConnect(url, clientID, secret, redirectURL, rf.flow)
+}

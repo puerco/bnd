@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,13 +11,11 @@ import (
 	"path"
 
 	"github.com/carabiner-dev/bind/internal/git"
-	"github.com/carabiner-dev/bind/pkg/bundle"
 	"github.com/puerco/ampel/pkg/attestation"
 	"github.com/puerco/ampel/pkg/formats/predicate"
 	"github.com/puerco/ampel/pkg/formats/statement/intoto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // commitOptions
@@ -26,6 +23,7 @@ type commitOptions struct {
 	predicateFileOptions
 	signOptions
 	outFileOptions
+	sigstoreOptions
 	RepoURL          string
 	RepoPath         string
 	Sha              string
@@ -39,6 +37,7 @@ func (co *commitOptions) Validate() error {
 	errs = append(errs, co.signOptions.Validate())
 	errs = append(errs, co.predicateFileOptions.Validate())
 	errs = append(errs, co.outFileOptions.Validate())
+	errs = append(errs, co.sigstoreOptions.Validate())
 
 	if co.Sha != "" && co.Tag != "" {
 		errs = append(errs, errors.New("only tag or commit hash can be specified at the same time"))
@@ -64,6 +63,7 @@ func (co *commitOptions) AddFlags(cmd *cobra.Command) {
 	co.signOptions.AddFlags(cmd)
 	co.predicateFileOptions.AddFlags(cmd)
 	co.outFileOptions.AddFlags(cmd)
+	co.sigstoreOptions.AddFlags(cmd)
 
 	cmd.PersistentFlags().StringVar(
 		&co.Sha, "sha", "", "commit hash to attest (defaults to HEAD of main branch)",
@@ -121,8 +121,6 @@ the commit subcommand moves HEAD around.
 			return nil
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			ctx := context.Background()
-
 			// Validate the options
 			if err := opts.Validate(); err != nil {
 				return err
@@ -195,27 +193,22 @@ the commit subcommand moves HEAD around.
 
 			logrus.Debugf("ATTESTATION:\n%s\n/ATTESTATION\n", string(attData))
 
-			signer := bundle.NewSigner()
-			bundle, err := signer.SignAndBind(ctx, attData)
-			if err != nil {
-				return fmt.Errorf("binding statement: %w", err)
-			}
+			signer := getSigner(&opts.sigstoreOptions)
 
-			data, err := protojson.Marshal(bundle)
+			bundle, err := signer.SignStatement(attData)
 			if err != nil {
-				return fmt.Errorf("marshaling bundle: %w", err)
+				return fmt.Errorf("writing signing statement: %w", err)
 			}
 
 			o, closer, err := opts.OutputWriter()
 			if err != nil {
-				return err
+				return fmt.Errorf("getting output stream: %w", err)
 			}
 			defer closer()
 
-			if _, err := o.Write(data); err != nil {
-				return fmt.Errorf("writing bundle data: %w", err)
+			if err := signer.WriteBundle(bundle, o); err != nil {
+				return err
 			}
-
 			return nil
 		},
 	}

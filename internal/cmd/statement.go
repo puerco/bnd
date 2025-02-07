@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/carabiner-dev/bind/pkg/bind"
 	"github.com/spf13/cobra"
 )
 
@@ -78,9 +77,7 @@ func addStatement(parentCmd *cobra.Command) {
 				return fmt.Errorf("reading statement data: %s", err)
 			}
 
-			signer := bind.NewSigner()
-			signer.Options.TufRootPath = opts.TufRootPath
-			signer.Options.TufRootURL = opts.TufRootURL
+			signer := getSigner(&opts.sigstoreOptions)
 
 			bundle, err := signer.SignStatement(attData)
 			if err != nil {

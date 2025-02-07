@@ -4,14 +4,12 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/carabiner-dev/bind/pkg/bundle"
 	v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/puerco/ampel/pkg/attestation"
 	"github.com/puerco/ampel/pkg/formats/predicate"
@@ -19,11 +17,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert/yaml"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type predicateOptions struct {
 	signOptions
+	sigstoreOptions
+	outFileOptions
 	predicateFileOptions
 	SubjectHashes    []string
 	SubjectPaths     []string
@@ -35,6 +34,8 @@ func (po *predicateOptions) Validate() error {
 	errs := []error{}
 	errs = append(errs, po.signOptions.Validate())
 	errs = append(errs, po.predicateFileOptions.Validate())
+	errs = append(errs, po.sigstoreOptions.Validate())
+	errs = append(errs, po.outFileOptions.Validate())
 
 	if len(po.SubjectHashes) == 0 {
 		errs = append(errs, errors.New("no subjects specified"))
@@ -46,6 +47,8 @@ func (po *predicateOptions) Validate() error {
 func (po *predicateOptions) AddFlags(cmd *cobra.Command) {
 	po.signOptions.AddFlags(cmd)
 	po.predicateFileOptions.AddFlags(cmd)
+	po.signOptions.AddFlags(cmd)
+	po.outFileOptions.AddFlags(cmd)
 
 	cmd.PersistentFlags().StringSliceVarP(
 		&po.SubjectHashes,
@@ -80,7 +83,6 @@ func addPredicate(parentCmd *cobra.Command) {
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
 		RunE: func(_ *cobra.Command, args []string) error {
-			ctx := context.Background()
 			if len(args) == 0 && opts.PredicatePath == "" {
 				return fmt.Errorf("no predicate file specified")
 			}
@@ -149,24 +151,22 @@ func addPredicate(parentCmd *cobra.Command) {
 
 			logrus.Debugf("ATTESTATION:\n%s\n/ATTESTATION\n", string(attData))
 
-			signer := bundle.NewSigner()
-			bundle, err := signer.SignAndBind(ctx, attData)
+			signer := getSigner(&opts.sigstoreOptions)
+
+			bundle, err := signer.SignStatement(attData)
 			if err != nil {
-				return fmt.Errorf("binding statement: %w", err)
+				return fmt.Errorf("writing signing statement: %w", err)
 			}
 
-			o := os.Stdout
-
-			// enc := json.NewEncoder(o)
-			data, err := protojson.Marshal(bundle)
+			o, closer, err := opts.OutputWriter()
 			if err != nil {
-				return fmt.Errorf("marshaling bundle: %w", err)
+				return fmt.Errorf("getting output stream: %w", err)
 			}
+			defer closer()
 
-			if _, err := o.Write(data); err != nil {
-				return fmt.Errorf("writing bundle data: %w", err)
+			if err := signer.WriteBundle(bundle, o); err != nil {
+				return err
 			}
-
 			return nil
 		},
 	}
