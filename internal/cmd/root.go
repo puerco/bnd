@@ -47,7 +47,12 @@ type commandLineOptions struct {
 
 var commandLineOpts = commandLineOptions{}
 
-func init() {
+func initLogging(*cobra.Command, []string) error {
+	return log.SetupGlobalLogger(commandLineOpts.logLevel)
+}
+
+// Execute builds the command
+func Execute() {
 	rootCmd.PersistentFlags().StringVar(
 		&commandLineOpts.logLevel,
 		"log-level", "info", fmt.Sprintf("the logging verbosity, either %s", log.LevelNames()),
@@ -60,14 +65,7 @@ func init() {
 	addPush(rootCmd)
 	addCommit(rootCmd)
 	rootCmd.AddCommand(version.WithFont("doom"))
-}
 
-func initLogging(*cobra.Command, []string) error {
-	return log.SetupGlobalLogger(commandLineOpts.logLevel)
-}
-
-// Execute builds the command
-func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Fatal(err)
 	}
