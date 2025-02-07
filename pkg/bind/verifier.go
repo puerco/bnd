@@ -15,7 +15,7 @@ type VerifyCapable interface {
 
 func NewVerifier() *Verifier {
 	return &Verifier{
-		Options:        VerificationOptions{},
+		Options:        DefaultVerifierOptions,
 		bundleVerifier: &bundleVerifier{},
 	}
 }

@@ -15,7 +15,7 @@ const GitHubTimeStamperURL = "https://timestamp.githubapp.com/api/v1/timestamp"
 
 func NewSigner() *Signer {
 	return &Signer{
-		Options:      defaultSignerOptions,
+		Options:      DefaultSignerOptions,
 		bundleSigner: &bundleSigner{},
 	}
 }

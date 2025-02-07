@@ -193,7 +193,7 @@ the commit subcommand moves HEAD around.
 
 			logrus.Debugf("ATTESTATION:\n%s\n/ATTESTATION\n", string(attData))
 
-			signer := getSigner(&opts.sigstoreOptions)
+			signer := getSigner(&opts.sigstoreOptions, &opts.signOptions)
 
 			bundle, err := signer.SignStatement(attData)
 			if err != nil {

@@ -10,7 +10,7 @@ type VerificationOptions struct {
 	RequireTlog      bool
 }
 
-var defaultVerifierOptions = VerificationOptions{
+var DefaultVerifierOptions = VerificationOptions{
 	BindTufOptions: BindTufOptions{
 		TufRootURL:  SigstorePublicGoodBaseURL,
 		TufRootPath: "",

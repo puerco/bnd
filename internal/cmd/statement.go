@@ -77,7 +77,7 @@ func addStatement(parentCmd *cobra.Command) {
 				return fmt.Errorf("reading statement data: %s", err)
 			}
 
-			signer := getSigner(&opts.sigstoreOptions)
+			signer := getSigner(&opts.sigstoreOptions, &opts.signOptions)
 
 			bundle, err := signer.SignStatement(attData)
 			if err != nil {

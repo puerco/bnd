@@ -73,9 +73,13 @@ func Execute() {
 }
 
 // getSigner builds a bind signer from a sigstore options set
-func getSigner(opts *sigstoreOptions) *bind.Signer {
+func getSigner(opts *sigstoreOptions, sopts *signOptions) *bind.Signer {
 	signer := bind.NewSigner()
 	signer.Options.TufRootPath = opts.TufRootPath
 	signer.Options.TufRootURL = opts.TufRootURL
+	signer.Options.OidcClientID = sopts.OidcClientID
+	signer.Options.OidcIssuer = sopts.OidcIssuer
+	signer.Options.OidcRedirectURL = sopts.OidcRedirectURL
+
 	return signer
 }

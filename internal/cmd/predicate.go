@@ -47,34 +47,20 @@ func (po *predicateOptions) Validate() error {
 func (po *predicateOptions) AddFlags(cmd *cobra.Command) {
 	po.signOptions.AddFlags(cmd)
 	po.predicateFileOptions.AddFlags(cmd)
-	po.signOptions.AddFlags(cmd)
+	po.sigstoreOptions.AddFlags(cmd)
 	po.outFileOptions.AddFlags(cmd)
 
 	cmd.PersistentFlags().StringSliceVarP(
-		&po.SubjectHashes,
-		"subject",
-		"s",
-		[]string{},
-		"list of hashes to include ",
+		&po.SubjectHashes, "subject", "s", []string{}, "list of hashes to add as subjects ",
 	)
 
 	cmd.PersistentFlags().StringVar(
-		&po.SubjectAlgorithm,
-		"hash-algo",
-		"sha256",
-		"algorithm used to hash the subjects",
+		&po.SubjectAlgorithm, "hash-algo", "sha256", "algorithm used to hash the subjects",
 	)
 }
 
-var defaultPredicateOpts = predicateOptions{
-	signOptions: signOptions{
-		Sign: true,
-	},
-	SubjectAlgorithm: "sha256",
-}
-
 func addPredicate(parentCmd *cobra.Command) {
-	opts := defaultPredicateOpts
+	opts := &predicateOptions{}
 	attCmd := &cobra.Command{
 		Short:             "packs a new attestation into a bundle from a JSON predicate",
 		Use:               "predicate",
@@ -151,7 +137,7 @@ func addPredicate(parentCmd *cobra.Command) {
 
 			logrus.Debugf("ATTESTATION:\n%s\n/ATTESTATION\n", string(attData))
 
-			signer := getSigner(&opts.sigstoreOptions)
+			signer := getSigner(&opts.sigstoreOptions, &opts.signOptions)
 
 			bundle, err := signer.SignStatement(attData)
 			if err != nil {

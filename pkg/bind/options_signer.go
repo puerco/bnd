@@ -9,7 +9,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 )
 
-var defaultSignerOptions = SignerOptions{
+var DefaultSignerOptions = SignerOptions{
 	BindTufOptions: BindTufOptions{
 		TufRootURL:  SigstorePublicGoodBaseURL,
 		TufRootPath: "",
