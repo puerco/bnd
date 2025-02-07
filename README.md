@@ -1,12 +1,19 @@
-# bind
+# 🥨 bind
 
-## A Utility to Work with Sigstore Bundles
+### A Utility to work with sigstore bundles and attestations
 	
 bind is a utility that makes it easy to work with attestations and sigstore bundles.
 It can create new bundles by "binding" an attestation and signing it. It can verify
 existing bundles, extract data from them inspect their contents.
 
 ```
+🥨 bind: a utility to work with attestations and sigstore bundles.
+	
+bind is a utility that makes it easy to work with attestations and sigstore bundles.
+It can create new bundles by "binding" a sattement, signing it and wrappring it
+in a bundle. It can verify existing bundles, extract data from them and inspect
+their contents.
+
 Usage:
   bind [command]
 
@@ -15,19 +22,22 @@ Examples:
 Create a new bundle by signing and bundling an attestation and its verification
 material:
 
-	bind attestation --out=bundle.json att.intoto.json
+	bind statement --out=bundle.json statement.intoto.json
 
-Inspect the new bundle:
+Inspect the resulting bundle:
+
 	bind inspect bundle.json
 	
 
 Available Commands:
-  attestation bind attestation: binds an attestation into a signed bundle
+  commit      attests to data of a commit
   completion  Generate the autocompletion script for the specified shell
   extract     extract data from sigstore bundles
   help        Help about any command
   inspect     prints useful information about a bundle
+  predicate   packs a new attestation into a bundle from a JSON predicate
   push        push pushes an attestation or bundle to github or an OCI registry
+  statement   bind statement: binds an in-toto attestation in a signed bundle
   verify      Verifies a bundle signature
   version     Prints the version
 
@@ -35,5 +45,6 @@ Flags:
   -h, --help               help for bind
       --log-level string   the logging verbosity, either 'panic', 'fatal', 'error', 'warning', 'info', 'debug', 'trace' (default "info")
 
+Use "bind [command] --help" for more information about a command.
 
 ```
