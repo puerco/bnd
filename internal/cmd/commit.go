@@ -11,6 +11,7 @@ import (
 	"path"
 
 	"github.com/carabiner-dev/bind/internal/git"
+	v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/puerco/ampel/pkg/attestation"
 	"github.com/puerco/ampel/pkg/formats/predicate"
 	"github.com/puerco/ampel/pkg/formats/statement/intoto"
@@ -83,7 +84,7 @@ func (co *commitOptions) AddFlags(cmd *cobra.Command) {
 }
 
 func addCommit(parentCmd *cobra.Command) {
-	opts := commitOptions{}
+	opts := &commitOptions{}
 	commitCmd := &cobra.Command{
 		Short: "attests to data of a commit",
 		Long: fmt.Sprintf(`
@@ -184,6 +185,20 @@ the commit subcommand moves HEAD around.
 
 			// Create the new attestation
 			statement := intoto.NewStatement(intoto.WithPredicate(pred))
+
+			repodeets, err := git.GetRepositoryDetails(opts.RepoPath)
+			if err != nil {
+				return fmt.Errorf("getting repo details: %w", err)
+			}
+
+			// TODO(puerco): Create the download location URI
+			statement.Subject = append(statement.Subject, &v1.ResourceDescriptor{
+				Uri: opts.RepoURL,
+				Digest: map[string]string{
+					"sha1":      repodeets.CommitSHA,
+					"gitCommit": repodeets.CommitSHA,
+				},
+			})
 
 			// Marshal the attestation data
 			attData, err := statement.ToJson()

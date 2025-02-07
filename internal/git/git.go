@@ -10,6 +10,7 @@ import (
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/release-sdk/git"
+	"sigs.k8s.io/release-utils/command"
 )
 
 type Components struct {
@@ -21,7 +22,9 @@ type Components struct {
 	SubPath   string
 }
 
-// CloneOrOpenCommit clones a repository to a temporary file and
+// CloneOrOpenCommit clones a repository at a specified reference into a
+// temporary directory and returns the path, a cleaner function or an error
+// if cloning fails.
 func CloneOrOpenCommit(repoURL, commit string) (string, func() error, error) {
 	var existingDir = ""
 	repo, err := git.CloneOrOpenRepo("", repoURL, false, false, &gogit.CloneOptions{})
@@ -52,4 +55,33 @@ func CloneOrOpenCommit(repoURL, commit string) (string, func() error, error) {
 	}
 
 	return repo.Dir(), cleaner, nil
+}
+
+type RepositoryDetails struct {
+	CommitSHA string
+	Tag       string
+	RepoURL   string
+}
+
+func GetRepositoryDetails(path string) (*RepositoryDetails, error) {
+	details := &RepositoryDetails{}
+	res, err := command.NewWithWorkDir(path, "git", "remote", "-v").RunSilentSuccessOutput()
+	if err != nil {
+		return nil, fmt.Errorf("running git to get remotes: %w", err)
+	}
+	details.RepoURL = res.OutputTrimNL()
+
+	res, err = command.NewWithWorkDir(path, "git", "rev-parse", "HEAD").RunSilentSuccessOutput()
+	if err != nil {
+		return nil, fmt.Errorf("running git to get revision: %w", err)
+	}
+	details.CommitSHA = res.OutputTrimNL()
+
+	res, err = command.NewWithWorkDir(path, "git", "tag", "--points-at", "HEAD").RunSilentSuccessOutput()
+	if err != nil {
+		return nil, fmt.Errorf("running git to get revision: %w", err)
+	}
+	details.Tag = res.OutputTrimNL()
+
+	return details, nil
 }

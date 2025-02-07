@@ -25,7 +25,7 @@ func (so *signOptions) AddFlags(cmd *cobra.Command) {
 	)
 
 	cmd.PersistentFlags().StringVar(
-		&so.OidcRedirectURL, "oidc-issuer", bind.DefaultSignerOptions.OidcIssuer, "OIDC issuer URL",
+		&so.OidcIssuer, "oidc-issuer", bind.DefaultSignerOptions.OidcIssuer, "OIDC issuer URL",
 	)
 
 	cmd.PersistentFlags().StringVar(
