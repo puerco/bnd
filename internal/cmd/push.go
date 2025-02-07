@@ -31,6 +31,7 @@ func addPush(parentCmd *cobra.Command) {
 		Use:               "push",
 		SilenceUsage:      false,
 		SilenceErrors:     true,
+		Hidden:            true,
 		PersistentPreRunE: initLogging,
 		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) > 0 {
