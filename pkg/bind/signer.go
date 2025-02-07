@@ -48,6 +48,7 @@ type SignerOptions struct {
 	Token         *oauthflow.OIDCIDToken
 	Timestamp     bool
 	AppendToRekor bool
+	DisableSTS    bool
 
 	// OidcRedirectURL defines the URL that the browser will redirect to.
 	// if the port is set to 0, bind will randomizr it to a high number
@@ -110,6 +111,11 @@ func (s *Signer) SignStatement(data []byte) (*v1.Bundle, error) {
 		return nil, err
 	}
 
+	// Run the STS providers to check for ambien credentials
+	if err := s.bundleSigner.GetAmbienTokens(&s.Options); err != nil {
+		return nil, fmt.Errorf("fetching ambien credentials: %w", err)
+	}
+
 	// Get the ID token
 	if err := s.bundleSigner.GetOidcToken(&s.Options); err != nil {
 		return nil, fmt.Errorf("getting ID token: %w", err)
@@ -132,6 +138,7 @@ type BundleSigner interface {
 	VerifyContent(*SignerOptions, []byte) error
 	WrapStatement([]byte) *sign.DSSEData
 	GetKeyPair(*SignerOptions) (*sign.EphemeralKeypair, error)
+	GetAmbienTokens(*SignerOptions) error
 	GetOidcToken(*SignerOptions) error
 	BuildSigstoreSignerOptions(*SignerOptions) (*sign.BundleOptions, error)
 	SignBundle(content sign.Content, keypair sign.Keypair, opts sign.BundleOptions) (*v1.Bundle, error)

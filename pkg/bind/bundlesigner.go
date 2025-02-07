@@ -4,6 +4,7 @@
 package bind
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/carabiner-dev/bind/internal/sts"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
@@ -177,4 +179,26 @@ func randomizePort(redirectURL string) string {
 		redirectURL, fmt.Sprintf("%s:0/", p.Hostname()), fmt.Sprintf("%s:%d/", p.Hostname(), rond.Int64()+1025), 1,
 	)
 	return replace
+}
+
+func (bs *bundleSigner) GetAmbienTokens(opts *SignerOptions) error {
+	// If sts providers are disabled, we're done.
+	if opts.DisableSTS {
+		return nil
+	}
+
+	ctx := context.Background()
+
+	for k, provider := range sts.DefaultProviders {
+		token, err := provider.Provide(ctx, opts.OidcClientID)
+		if err != nil {
+			return fmt.Errorf("trying ambien credentials from %s: %w", k, err)
+		}
+
+		if token != nil {
+			opts.Token = token
+			return nil
+		}
+	}
+	return nil
 }
