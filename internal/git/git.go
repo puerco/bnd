@@ -4,8 +4,10 @@
 package git
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/sirupsen/logrus"
@@ -57,21 +59,34 @@ func CloneOrOpenCommit(repoURL, commit string) (string, func() error, error) {
 	return repo.Dir(), cleaner, nil
 }
 
-type RepositoryDetails struct {
+type HeadDetails struct {
 	CommitSHA string
 	Tag       string
-	RepoURL   string
 }
 
-func GetRepositoryDetails(path string) (*RepositoryDetails, error) {
-	details := &RepositoryDetails{}
+func GetRemotes(path string) (map[string]string, error) {
+	remotes := map[string]string{}
 	res, err := command.NewWithWorkDir(path, "git", "remote", "-v").RunSilentSuccessOutput()
 	if err != nil {
 		return nil, fmt.Errorf("running git to get remotes: %w", err)
 	}
-	details.RepoURL = res.OutputTrimNL()
+	remoteout := res.Output()
 
-	res, err = command.NewWithWorkDir(path, "git", "rev-parse", "HEAD").RunSilentSuccessOutput()
+	scanner := bufio.NewScanner(strings.NewReader(remoteout))
+	for scanner.Scan() {
+		pts := strings.Fields(scanner.Text())
+		if len(pts) < 2 {
+			continue
+		}
+		remotes[pts[0]] = pts[1]
+	}
+	return remotes, nil
+}
+
+func GetHeadDetails(path string) (*HeadDetails, error) {
+	details := &HeadDetails{}
+
+	res, err := command.NewWithWorkDir(path, "git", "rev-parse", "HEAD").RunSilentSuccessOutput()
 	if err != nil {
 		return nil, fmt.Errorf("running git to get revision: %w", err)
 	}

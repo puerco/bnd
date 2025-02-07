@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/carabiner-dev/bind/internal/git"
 	v1 "github.com/in-toto/attestation/go/v1"
@@ -17,6 +19,7 @@ import (
 	"github.com/puerco/ampel/pkg/formats/statement/intoto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/release-utils/util"
 )
 
 // commitOptions
@@ -25,11 +28,14 @@ type commitOptions struct {
 	signOptions
 	outFileOptions
 	sigstoreOptions
-	RepoURL          string
-	RepoPath         string
+	CloneAddress     string
+	repoURL          string
+	repoPath         string
+	clonePath        string
 	Sha              string
 	Tag              string
 	PredicateGitPath string
+	remoteNames      []string
 }
 
 // Validate checks the options
@@ -49,10 +55,10 @@ func (co *commitOptions) Validate() error {
 	}
 
 	if co.PredicatePath != "" && co.PredicateGitPath != "" {
-		errs = append(errs, errors.New("predicater specified as file and as checked data"))
+		errs = append(errs, errors.New("predicater specified as local file and as data from the repo"))
 	}
 
-	if co.Tag != "" && (co.RepoURL == "" && co.RepoPath == "") {
+	if co.Tag != "" && (co.repoURL == "" && co.repoPath == "") {
 		errs = append(errs, errors.New("repo URL or repo path must be sepcified whe attesting a git tag"))
 	}
 
@@ -75,16 +81,18 @@ func (co *commitOptions) AddFlags(cmd *cobra.Command) {
 	)
 
 	cmd.PersistentFlags().StringVarP(
-		&co.RepoURL, "repo", "r", "", "url of the repository to clone",
+		&co.CloneAddress, "repo", "r", "", "local path or url of the repository to clone",
 	)
 
 	cmd.PersistentFlags().StringVar(
-		&co.PredicateGitPath, "git-predicate", "", "path to the predicate in the local repo",
+		&co.PredicateGitPath, "predicate-git-path", "", "read the predicate from this path in the local repo",
 	)
 }
 
 func addCommit(parentCmd *cobra.Command) {
-	opts := &commitOptions{}
+	opts := &commitOptions{
+		remoteNames: []string{"upstream", "origin"},
+	}
 	commitCmd := &cobra.Command{
 		Short: "attests to data of a commit",
 		Long: fmt.Sprintf(`
@@ -106,8 +114,25 @@ repositories from disk. The purpose is to avoid messing up you environment as
 the commit subcommand moves HEAD around.
 
 	`, appname, appname),
-		Use:               "commit",
-		Example:           fmt.Sprintf(`%s commit --type="example.com/v1" --tag=v1.0.0 --from`, appname),
+		Use: "commit",
+		Example: fmt.Sprintf(`
+Create an attestation about the commit at HEAD, reading the predicate from data.json
+
+  %s commit --repo=http://github.com/example/test --predicate=data.json
+
+Attest to git tag v1 reading the predicate from data.json:
+
+  %s commit --repo=http://github.com/example/test --tag=v1 --predicate=data.json
+
+Create an attestation for tag v1, reading the predicate from a commited file:
+
+  %s commit --repo=http://github.com/example/test --tag=v1 --predicate-git-path=pred.json
+
+Same, but cloning the repo from a local clone:
+
+  %s commit --repo myrepos/repo --tag=v1 --predicate-git-path=pred.json
+
+`, appname, appname, appname, appname),
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
@@ -119,6 +144,13 @@ the commit subcommand moves HEAD around.
 			if len(args) > 0 && args[0] != opts.PredicatePath {
 				return fmt.Errorf("predicate specified twice (-p and argument)")
 			}
+
+			// Detect if the clone address is a local path or a remote URL
+			if util.Exists(opts.CloneAddress) {
+				opts.repoPath = opts.CloneAddress
+			} else {
+				opts.repoURL = opts.CloneAddress
+			}
 			return nil
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -127,31 +159,29 @@ the commit subcommand moves HEAD around.
 				return err
 			}
 
-			if opts.RepoURL != "" {
-				logrus.Debugf("cloning %s", opts.RepoURL)
-				path, _, err := git.CloneOrOpenCommit(opts.RepoURL, opts.Sha)
-				if err != nil {
-					return fmt.Errorf("cloning remote repo: %w", err)
-				}
-				if path == "" {
-					return errors.New("no repo path received from cloning operation")
-				}
-				opts.RepoPath = path
-			} else {
-				return fmt.Errorf("local repo not implemented yet")
+			logrus.Debugf("cloning %s", opts.CloneAddress)
+
+			tmpPath, cleaner, err := git.CloneOrOpenCommit(opts.CloneAddress, opts.Sha)
+			if err != nil {
+				return fmt.Errorf("cloning remote repo: %w", err)
 			}
+			if tmpPath == "" {
+				return errors.New("no repo path received from cloning operation")
+			}
+			defer cleaner()
+			opts.clonePath = tmpPath
 
 			// Use the predicate path from the options
 			predicatePath := opts.PredicatePath
+
 			//  ... unless its pointing to the cloned repo
 			if opts.PredicateGitPath != "" {
-				if opts.RepoPath == "" {
+				if opts.clonePath == "" {
 					return errors.New("repo path not set")
 				}
-				predicatePath = path.Join(opts.RepoPath, opts.PredicateGitPath)
+				predicatePath = path.Join(opts.clonePath, opts.PredicateGitPath)
 			}
 
-			var f io.Reader
 			f, err := os.Open(predicatePath)
 			if err != nil {
 				return fmt.Errorf("opening predicate file: %w", err)
@@ -186,19 +216,28 @@ the commit subcommand moves HEAD around.
 			// Create the new attestation
 			statement := intoto.NewStatement(intoto.WithPredicate(pred))
 
-			repodeets, err := git.GetRepositoryDetails(opts.RepoPath)
+			head, err := git.GetHeadDetails(opts.clonePath)
 			if err != nil {
 				return fmt.Errorf("getting repo details: %w", err)
 			}
 
 			// TODO(puerco): Create the download location URI
-			statement.Subject = append(statement.Subject, &v1.ResourceDescriptor{
-				Uri: opts.RepoURL,
+			subject := &v1.ResourceDescriptor{
+				Uri: opts.repoURL,
 				Digest: map[string]string{
-					"sha1":      repodeets.CommitSHA,
-					"gitCommit": repodeets.CommitSHA,
+					"sha1":      head.CommitSHA,
+					"gitCommit": head.CommitSHA,
 				},
-			})
+			}
+
+			locator, err := makeVCSLocator(opts, head, git.GetRemotes)
+			if err == nil {
+				subject.Uri = locator
+			} else {
+				logrus.Errorf("error forming VCS locator: %v", err)
+			}
+
+			statement.Subject = append(statement.Subject, subject)
 
 			// Marshal the attestation data
 			attData, err := statement.ToJson()
@@ -229,4 +268,53 @@ the commit subcommand moves HEAD around.
 	}
 	opts.AddFlags(commitCmd)
 	parentCmd.AddCommand(commitCmd)
+}
+
+// makeVCSLocator builds the repository VCS locator from the available data
+func makeVCSLocator(opts *commitOptions, head *git.HeadDetails, remoteReader func(string) (map[string]string, error)) (string, error) {
+	var sourceURL = ""
+	if opts.repoURL != "" {
+		sourceURL = opts.repoURL
+	} else {
+		remotes, err := remoteReader(opts.repoPath)
+		if err != nil {
+			return "", err
+		}
+		for _, k := range opts.remoteNames {
+			if v, ok := remotes[k]; ok {
+				sourceURL = v
+				break
+			}
+		}
+
+		// If no match, pick the first
+		if sourceURL == "" {
+			for _, v := range remotes {
+				sourceURL = v
+				break
+			}
+		}
+	}
+
+	// If the URL is on ssh, we need to make some changes
+	if strings.Contains(sourceURL, "@") {
+		_, u, _ := strings.Cut(sourceURL, "@")
+		u = strings.Replace(u, ":", "/", 1)
+
+		// if its a github url, remote the .git to make it more compact
+		if strings.HasPrefix(u, "github.com/") {
+			u = strings.TrimSuffix(u, ".git")
+		}
+		sourceURL = "ssh://" + u
+	}
+
+	u, err := url.Parse(sourceURL)
+	if err != nil {
+		return "", fmt.Errorf("parsing repo source URL")
+	}
+
+	return "git+" + u.String() + "@" + head.CommitSHA, nil
+
+	// if its local, use the remotes
+
 }
