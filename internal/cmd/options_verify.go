@@ -20,7 +20,7 @@ func (vo *verifcationOptions) AddFlags(cmd *cobra.Command) {
 	)
 
 	cmd.PersistentFlags().BoolVar(
-		&vo.RequireTlog, "timestamps", true,
+		&vo.RequireTimestamp, "timestamps", true,
 		"look for observer timestamps when verifying",
 	)
 }

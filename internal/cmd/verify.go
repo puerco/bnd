@@ -35,7 +35,7 @@ func (o *verifyOptions) AddFlags(cmd *cobra.Command) {
 
 // addVerify adds the verification command
 func addVerify(parentCmd *cobra.Command) {
-	opts := verifyOptions{}
+	opts := &verifyOptions{}
 	verifyCmd := &cobra.Command{
 		Short:             "Verifies a bundle signature",
 		Use:               "verify",
@@ -61,8 +61,10 @@ func addVerify(parentCmd *cobra.Command) {
 
 			verifier := bind.NewVerifier()
 			verifier.Options = bind.VerificationOptions{
-				TufRootURL:       opts.TufRootURL,
-				TufRootPath:      opts.TufRootPath,
+				BindTufOptions: bind.BindTufOptions{
+					TufRootURL:  opts.TufRootURL,
+					TufRootPath: opts.TufRootPath,
+				},
 				RequireCTlog:     opts.RequireCTlog,
 				RequireTimestamp: opts.RequireTimestamp,
 				RequireTlog:      opts.RequireTlog,
