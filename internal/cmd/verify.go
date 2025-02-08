@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/carabiner-dev/bind/pkg/bind"
+	"github.com/carabiner-dev/bnd/pkg/bnd"
 	"github.com/spf13/cobra"
 )
 
@@ -59,15 +59,20 @@ func addVerify(parentCmd *cobra.Command) {
 			// Silence usage here as options are validated
 			cmd.SilenceUsage = true
 
-			verifier := bind.NewVerifier()
-			verifier.Options = bind.VerificationOptions{
-				BindTufOptions: bind.BindTufOptions{
+			verifier := bnd.NewVerifier()
+			verifier.Options = bnd.VerificationOptions{
+				TufOptions: bnd.TufOptions{
 					TufRootURL:  opts.TufRootURL,
 					TufRootPath: opts.TufRootPath,
 				},
-				RequireCTlog:     opts.RequireCTlog,
-				RequireTimestamp: opts.RequireTimestamp,
-				RequireTlog:      opts.RequireTlog,
+				RequireCTlog:        opts.RequireCTlog,
+				RequireTimestamp:    opts.RequireTimestamp,
+				RequireTlog:         opts.RequireTlog,
+				ExpectedIssuer:      opts.ExpectedIssuer,
+				ExpectedIssuerRegex: opts.ExpectedIssuerRegex,
+				ExpectedSan:         opts.ExpectedSan,
+				ExpectedSanRegex:    opts.ExpectedSanRegex,
+				SkipIdentityCheck:   opts.SkipIdentityCheck,
 			}
 			result, err := verifier.VerifyBundle(opts.Path)
 			if err != nil {
