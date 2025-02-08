@@ -13,8 +13,7 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 
-	//"github.com/sigstore/rekor/pkg/types/intoto"
-	intoto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/puerco/ampel/pkg/formats/statement/intoto"
 )
 
 type Tool struct{}
@@ -74,7 +73,7 @@ func (t *Tool) ExtractPredicateType(bundle *protobundle.Bundle) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("extracting attestation: %w", err)
 	}
-	return attestation.PredicateType, nil
+	return string(attestation.PredicateType), nil
 }
 
 // ExtractPredicate returns the attestation predicate data
@@ -88,14 +87,17 @@ func (t *Tool) ExtractPredicate(bundle *protobundle.Bundle) (any, error) {
 
 // ParseAttestation reads an attestation from the Reader r and
 func (t *Tool) ParseAttestation(r io.Reader) (*intoto.Statement, error) {
-	attestation := &intoto.Statement{
-		StatementHeader: intoto.StatementHeader{},
+	p := intoto.Parser{}
+
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("reading attestation data")
 	}
-	decoder := json.NewDecoder(r)
-	if err := decoder.Decode(attestation); err != nil {
-		return nil, fmt.Errorf("decoding attestation json: %w", err)
+	statement, err := p.Parse(data)
+	if err != nil {
+		return nil, fmt.Errorf("parsing statement: %w", err)
 	}
-	return attestation, nil
+	return statement.(*intoto.Statement), nil
 }
 
 // ExtractAttestation returns a strut with the data decoded from the bundle
