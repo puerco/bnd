@@ -30,9 +30,7 @@ func (o *extractAttOptions) AddFlags(cmd *cobra.Command) {
 	o.outFileOptions.AddFlags(cmd)
 	o.bundleOptions.AddFlags(cmd)
 	cmd.PersistentFlags().BoolVar(
-		&o.AsDSSE,
-		"dsse",
-		false,
+		&o.AsDSSE, "dsse", false,
 		"output the attestation wrapped in its DSSE bundle",
 	)
 }
@@ -40,9 +38,9 @@ func (o *extractAttOptions) AddFlags(cmd *cobra.Command) {
 func addExtractAttestation(parentCmd *cobra.Command) {
 	opts := extractAttOptions{}
 	extractCmd := &cobra.Command{
-		Short:             "extracts the attestation contained in a bundle",
-		Use:               "attestation",
-		Example:           fmt.Sprintf("%s extract attestation bundle.json ", appname),
+		Short:             "extracts the attestation statement from a bundle",
+		Use:               "statement",
+		Example:           fmt.Sprintf("%s extract statement bundle.json ", appname),
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
