@@ -41,6 +41,7 @@ func addExtractAttestation(parentCmd *cobra.Command) {
 		Short:             "extracts the attestation statement from a bundle",
 		Use:               "statement",
 		Example:           fmt.Sprintf("%s extract statement bundle.json ", appname),
+		Aliases:           []string{"s", "attestation"},
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,

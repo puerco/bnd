@@ -32,17 +32,13 @@ func (o *extractPredOptions) AddFlags(cmd *cobra.Command) {
 	o.outFileOptions.AddFlags(cmd)
 	o.bundleOptions.AddFlags(cmd)
 	cmd.PersistentFlags().BoolVar(
-		&o.TypeOnly,
-		"type",
-		false,
+		&o.TypeOnly, "type", false,
 		"extract only the preicate type srting",
 	)
 
 	cmd.PersistentFlags().BoolVar(
-		&o.FromAttestation,
-		"from-attestation",
-		false,
-		"treat the input file as an attestation, not a bundle",
+		&o.FromAttestation, "from-attestation", false,
+		"treat the input file as an in-toto attestation, not a bundle",
 	)
 }
 
@@ -54,6 +50,7 @@ func addExtractPredicate(parentCmd *cobra.Command) {
 		Example:           fmt.Sprintf("%s extract predicate bundle.json ", appname),
 		SilenceUsage:      false,
 		SilenceErrors:     true,
+		Aliases:           []string{"p"},
 		PersistentPreRunE: initLogging,
 		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) > 0 {

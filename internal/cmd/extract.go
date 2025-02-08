@@ -11,6 +11,7 @@ func addExtract(parentCmd *cobra.Command) {
 	extractCmd := &cobra.Command{
 		Short:             "extract data from sigstore bundles",
 		Use:               "extract [attestation | predicate] bundle.json",
+		Aliases:           []string{"e"},
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
