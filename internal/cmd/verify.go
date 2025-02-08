@@ -76,10 +76,18 @@ func addVerify(parentCmd *cobra.Command) {
 			}
 			result, err := verifier.VerifyBundle(opts.Path)
 			if err != nil {
+				fmt.Println("\n❌ Bundle Verification Failed")
+				fmt.Println("")
 				return fmt.Errorf("error verifying bundle: %w", err)
 			}
 
-			fmt.Printf("%+v", result)
+			fmt.Printf("\n✅ Bundle Verification OK!\n")
+			if !opts.SkipIdentityCheck {
+				fmt.Println("")
+				fmt.Printf("Signer:      %+s\n", result.VerifiedIdentity.SubjectAlternativeName.SubjectAlternativeName)
+				fmt.Printf("OIDC Issuer: %+s\n", result.VerifiedIdentity.Issuer.Issuer)
+			}
+			fmt.Println("")
 			return nil
 		},
 	}
