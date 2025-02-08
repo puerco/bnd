@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/carabiner-dev/bnd/pkg/bundle"
+	ampelb "github.com/puerco/ampel/pkg/formats/envelope/bundle"
 	"github.com/spf13/cobra"
 )
 
@@ -66,20 +67,25 @@ data about the bundle.
 
 			tool := bundle.NewTool()
 
-			b, err := tool.ParseBundle(reader)
+			envelope, err := tool.ParseBundle(reader)
 			if err != nil {
 				return fmt.Errorf("parsing bundle: %w", err)
 			}
 
-			att, err := tool.ExtractAttestation(b)
+			att, err := tool.ExtractAttestation(envelope)
 			if err != nil {
 				return fmt.Errorf("unable to extract attestation from bundle")
 			}
 
+			mediatype := "unknown"
+			if bndl, ok := envelope.(*ampelb.Envelope); ok {
+				mediatype = bndl.GetMediaType()
+			}
+
 			fmt.Println("\nBundle Details:")
 			fmt.Println("---------------")
-			fmt.Printf("Bundle media type: %s\n", b.MediaType)
-			fmt.Printf("Attestation predicate: %s\n", att.PredicateType)
+			fmt.Printf("Bundle media type: %s\n", mediatype)
+			fmt.Printf("Attestation predicate: %s\n", att.GetPredicateType())
 			fmt.Println("")
 			return nil
 		},

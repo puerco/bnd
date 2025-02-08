@@ -4,15 +4,16 @@
 package bundle
 
 import (
-	"bytes"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
 	// "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sirupsen/logrus"
 
+	"github.com/puerco/ampel/pkg/attestation"
+	ampelb "github.com/puerco/ampel/pkg/formats/envelope/bundle"
 	"github.com/puerco/ampel/pkg/formats/statement/intoto"
 )
 
@@ -23,18 +24,19 @@ func NewTool() *Tool {
 }
 
 // Parse reades the budle data from reader r and decodes it into
-func (t *Tool) ParseBundle(r io.Reader) (*protobundle.Bundle, error) {
-	var bndl sbundle.Bundle
-	bndl.Bundle = new(protobundle.Bundle)
-
-	data, err := io.ReadAll(r)
+func (t *Tool) ParseBundle(r io.Reader) (attestation.Envelope, error) {
+	p := ampelb.Parser{}
+	envelopeSet, err := p.ParseStream(r)
 	if err != nil {
-		return nil, fmt.Errorf("reading bundle data: %w", err)
+		return nil, fmt.Errorf("parsing bundle: %w", err)
 	}
-	if err := bndl.UnmarshalJSON(data); err != nil {
-		return nil, fmt.Errorf("unmarshalling bundle JSON: %w", err)
+	if len(envelopeSet) == 0 {
+		return nil, fmt.Errorf("no bundles could be extracted from input")
 	}
-	return bndl.Bundle, nil
+	if len(envelopeSet) > 1 {
+		logrus.Warnf("Input parse returned %d envelopes, only returning the first", len(envelopeSet))
+	}
+	return envelopeSet[0], nil
 }
 
 // getBundleContentIfDSSE returns the bundle contents if it is wrapped in a DSSE
@@ -52,37 +54,34 @@ func getBundleContentIfDSSE(bundle *protobundle.Bundle) *protobundle.Bundle_Dsse
 
 // ExtractPredicateJSON is akin to ExtractPredicate but returns the predicated
 // marshalled as JSON
-func (t *Tool) ExtractPredicateJSON(bundle *protobundle.Bundle) ([]byte, error) {
-	pred, err := t.ExtractPredicate(bundle)
-	if err != nil {
-		return nil, err
+func (t *Tool) ExtractPredicateJSON(envelope attestation.Envelope) ([]byte, error) {
+	statement := envelope.GetStatement()
+	if statement == nil {
+		return nil, fmt.Errorf("no statement found in envelope")
 	}
-	var b bytes.Buffer
-	enc := json.NewEncoder(&b)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(pred); err != nil {
-		return nil, fmt.Errorf("marshaling predicate: %w", err)
+
+	pred := statement.GetPredicate()
+	if pred == nil {
+		return nil, errors.New("statement has no predicate")
 	}
-	return b.Bytes(), nil
+
+	return pred.GetData(), nil
 }
 
 // ExtractPredicateType returns a string with the attestation predicate type
-func (t *Tool) ExtractPredicateType(bundle *protobundle.Bundle) (string, error) {
-	attestation, err := t.ExtractAttestation(bundle)
-	if err != nil {
-		return "", fmt.Errorf("extracting attestation: %w", err)
+func (t *Tool) ExtractPredicateType(bndl attestation.Envelope) (string, error) {
+	if bndl.GetStatement() != nil {
+		return bndl.GetStatement().GetType(), nil
 	}
-	return string(attestation.PredicateType), nil
+	return "", errors.New("bundle contains no statement")
 }
 
 // ExtractPredicate returns the attestation predicate data
-func (t *Tool) ExtractPredicate(bundle *protobundle.Bundle) (any, error) {
-	attestation, err := t.ExtractAttestation(bundle)
-	if err != nil {
-		return nil, fmt.Errorf("extracting attestation: %w", err)
+func (t *Tool) ExtractPredicate(bndl attestation.Envelope) (attestation.Predicate, error) {
+	if bndl.GetStatement() == nil {
+		return nil, fmt.Errorf("bundle has no statement defined")
 	}
-	return attestation.Predicate, nil
+	return bndl.GetStatement().GetPredicate(), nil
 }
 
 // ParseAttestation reads an attestation from the Reader r and
@@ -102,22 +101,8 @@ func (t *Tool) ParseAttestation(r io.Reader) (*intoto.Statement, error) {
 
 // ExtractAttestation returns a strut with the data decoded from the bundle
 // contents JSON.
-func (t *Tool) ExtractAttestation(bundle *protobundle.Bundle) (*intoto.Statement, error) {
-	attestationData, err := t.ExtractAttestationJSON(bundle)
-	if err != nil {
-		return nil, fmt.Errorf("extracting attestation: %w", err)
-	}
-
-	var b bytes.Buffer
-	if _, err := b.Write(attestationData); err != nil {
-		return nil, fmt.Errorf("buffering attestation data: %w", err)
-	}
-
-	attestation, err := t.ParseAttestation(&b)
-	if err != nil {
-		return nil, fmt.Errorf("parsing attestation json: %w", err)
-	}
-	return attestation, nil
+func (t *Tool) ExtractAttestation(bndl attestation.Envelope) (attestation.Statement, error) {
+	return bndl.GetStatement(), nil
 }
 
 // ExtractAttestationJSON returns the attestation JSON enclosed in the bundle
