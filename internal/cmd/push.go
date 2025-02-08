@@ -27,7 +27,7 @@ func (o *pushOptions) AddFlags(cmd *cobra.Command) {
 func addPush(parentCmd *cobra.Command) {
 	opts := pushOptions{}
 	pushCmd := &cobra.Command{
-		Short:             "push pushes an attestation or bundle to github or an OCI registry",
+		Short:             "pushes an attestation or bundle to github or an OCI registry",
 		Use:               "push",
 		SilenceUsage:      false,
 		SilenceErrors:     true,
@@ -43,8 +43,6 @@ func addPush(parentCmd *cobra.Command) {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
-
-			//tool := bundle.NewTool()
 
 			return nil
 		},

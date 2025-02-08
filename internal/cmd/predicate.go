@@ -31,11 +31,12 @@ type predicateOptions struct {
 
 // Validates the options in context with arguments
 func (po *predicateOptions) Validate() error {
-	errs := []error{}
-	errs = append(errs, po.signOptions.Validate())
-	errs = append(errs, po.predicateFileOptions.Validate())
-	errs = append(errs, po.sigstoreOptions.Validate())
-	errs = append(errs, po.outFileOptions.Validate())
+	errs := append([]error{},
+		po.signOptions.Validate(),
+		po.predicateFileOptions.Validate(),
+		po.sigstoreOptions.Validate(),
+		po.outFileOptions.Validate(),
+	)
 
 	if len(po.SubjectHashes) == 0 {
 		errs = append(errs, errors.New("no subjects specified"))
@@ -161,7 +162,7 @@ func addPredicate(parentCmd *cobra.Command) {
 }
 
 func convertYaml(in []byte) ([]byte, error) {
-	var datamap = &map[string]any{}
+	datamap := &map[string]any{}
 	if err := yaml.Unmarshal(in, datamap); err != nil {
 		return nil, fmt.Errorf("parsing predicate YAML")
 	}

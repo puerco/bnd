@@ -21,10 +21,11 @@ type statementOptions struct {
 
 // Validates the options in context with arguments
 func (so *statementOptions) Validate() error {
-	errs := []error{}
-	errs = append(errs, so.signOptions.Validate())
-	errs = append(errs, so.outFileOptions.Validate())
-	errs = append(errs, so.sigstoreOptions.Validate())
+	errs := append([]error{},
+		so.signOptions.Validate(),
+		so.outFileOptions.Validate(),
+		so.sigstoreOptions.Validate(),
+	)
 
 	if so.StatementPath == "" {
 		errs = append(errs, errors.New("attestation path is empty"))

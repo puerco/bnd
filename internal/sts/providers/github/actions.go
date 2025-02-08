@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/sigstore/sigstore/pkg/oauthflow"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -56,15 +57,21 @@ func (actions *Actions) Provide(ctx context.Context, audience string) (*oauthflo
 			// DefaultClient will fail because it will just use HTTP2 again.
 			// I don't know why go doesn't do this for us.
 			if strings.Contains(err.Error(), "HTTP_1_1_REQUIRED") {
-				http1transport := http.DefaultTransport.(*http.Transport).Clone()
-				http1transport.ForceAttemptHTTP2 = false
+				if dt, ok := http.DefaultTransport.(*http.Transport); ok {
+					http1transport := dt.Clone()
+					http1transport.ForceAttemptHTTP2 = false
 
-				client = &http.Client{
-					Transport: http1transport,
+					client = &http.Client{
+						Transport: http1transport,
+					}
+				} else {
+					// If the transport cannot be chamged to http return, there
+					// is no point in retrying
+					return nil, err
 				}
 			}
 
-			fmt.Fprintf(os.Stderr, "error fetching GitHub OIDC token (will retry): %v\n", err)
+			logrus.Warnf("error fetching GitHub OIDC token (will retry): %v", err)
 			time.Sleep(time.Second)
 			continue
 		}

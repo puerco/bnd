@@ -27,25 +27,26 @@ type Components struct {
 // CloneOrOpenCommit clones a repository at a specified reference into a
 // temporary directory and returns the path, a cleaner function or an error
 // if cloning fails.
-func CloneOrOpenCommit(repoURL, commit string) (string, func() error, error) {
-	var existingDir = ""
+func CloneOrOpenCommit(repoURL, commit string) (tmpPath string, cleaner func(), err error) {
+	existingDir := ""
 	repo, err := git.CloneOrOpenRepo("", repoURL, false, false, &gogit.CloneOptions{})
 	if err != nil {
 		return "", nil, fmt.Errorf("cloning repository: %w", err)
 	}
 
-	var tmp = ""
+	tmp := ""
 	if existingDir == "" {
 		tmp = repo.Dir()
 		logrus.Debugf("cloned repo to %s", repoURL)
 	}
 
 	// Only create the cleaner func if using a tmp path
-	var cleaner = func() error {
+	cleaner = func() {
 		if tmp != "" {
-			return os.RemoveAll(tmp)
+			if err := os.RemoveAll(tmp); err != nil {
+				logrus.Error("error removing temporary git clone directory")
+			}
 		}
-		return nil
 	}
 
 	if commit == "" {

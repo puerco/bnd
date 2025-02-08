@@ -28,7 +28,7 @@ type BundleSigner interface {
 	GetAmbienTokens(*SignerOptions) error
 	GetOidcToken(*SignerOptions) error
 	BuildSigstoreSignerOptions(*SignerOptions) (*sign.BundleOptions, error)
-	SignBundle(content sign.Content, keypair sign.Keypair, opts sign.BundleOptions) (*v1.Bundle, error)
+	SignBundle(content sign.Content, keypair sign.Keypair, opts *sign.BundleOptions) (*v1.Bundle, error)
 }
 
 // bundleSigner implements the BundleSigner interface for the signer
@@ -89,13 +89,10 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 		return nil, fmt.Errorf("getting signing config from TUF")
 	}
 
-	// This could be an option
-	//signingConfig.AddTimestampAuthorityURLs(GitHubTimeStamperURL)
-
 	// Config fuilcio
 	fulcioOpts := &sign.FulcioOptions{
 		BaseURL: signingConfig.FulcioCertificateAuthorityURL(),
-		Timeout: time.Duration(30 * time.Second),
+		Timeout: 30 * time.Second,
 		Retries: 1,
 	}
 
@@ -108,23 +105,20 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 		for _, tsaURL := range signingConfig.TimestampAuthorityURLs() {
 			tsaOpts := &sign.TimestampAuthorityOptions{
 				URL:     tsaURL,
-				Timeout: time.Duration(30 * time.Second),
+				Timeout: 30 * time.Second,
 				Retries: 1,
 			}
 			bundleOptions.TimestampAuthorities = append(
 				bundleOptions.TimestampAuthorities, sign.NewTimestampAuthority(tsaOpts),
 			)
 		}
-
-		// staging TUF repo doesn't have accessible timestamp authorities
-		// opts.TrustedRoot = nil
 	}
 
 	if opts.AppendToRekor {
 		for _, rekorURL := range signingConfig.RekorLogURLs() {
 			rekorOpts := &sign.RekorOptions{
 				BaseURL: rekorURL,
-				Timeout: time.Duration(90 * time.Second),
+				Timeout: 90 * time.Second,
 				Retries: 1,
 			}
 			bundleOptions.TransparencyLogs = append(bundleOptions.TransparencyLogs, sign.NewRekor(rekorOpts))
@@ -135,8 +129,8 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 }
 
 // SignBundle signs the DSSE envelop and returns the new bundle
-func (bs *bundleSigner) SignBundle(content sign.Content, keypair sign.Keypair, opts sign.BundleOptions) (*v1.Bundle, error) {
-	bndl, err := sign.Bundle(content, keypair, opts)
+func (bs *bundleSigner) SignBundle(content sign.Content, keypair sign.Keypair, opts *sign.BundleOptions) (*v1.Bundle, error) {
+	bndl, err := sign.Bundle(content, keypair, *opts)
 	if err != nil {
 		return nil, fmt.Errorf("signing DSSE wrapper: %w", err)
 	}
@@ -150,7 +144,7 @@ func (bs *bundleSigner) GetOidcToken(opts *SignerOptions) error {
 	// environment.
 	//
 	// TODO(puerco): This needs to fetch the token from github actions
-	connector := &realConnector{}
+	connector := &oidcConnector{}
 	switch {
 	case opts.Token != nil:
 		connector.flow = &oauthflow.StaticTokenGetter{RawToken: opts.Token.RawString}
@@ -161,7 +155,7 @@ func (bs *bundleSigner) GetOidcToken(opts *SignerOptions) error {
 	}
 
 	// Run the flow and get the access token:
-	tok, err := connector.OIDConnect(
+	tok, err := connector.Connect(
 		opts.OidcIssuer,
 		opts.OidcClientID,
 		opts.OidcClientSecret,
@@ -176,7 +170,7 @@ func (bs *bundleSigner) GetOidcToken(opts *SignerOptions) error {
 }
 
 func randomizePort(redirectURL string) string {
-	var p, err = url.Parse(redirectURL)
+	p, err := url.Parse(redirectURL)
 	if err != nil {
 		return ""
 	}
@@ -214,14 +208,10 @@ func (bs *bundleSigner) GetAmbienTokens(opts *SignerOptions) error {
 	return nil
 }
 
-type oidcConnector interface {
-	OIDConnect(string, string, string, string) (*oauthflow.OIDCIDToken, error)
-}
-
-type realConnector struct {
+type oidcConnector struct {
 	flow oauthflow.TokenGetter
 }
 
-func (rf *realConnector) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
+func (rf *oidcConnector) Connect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
 	return oauthflow.OIDConnect(url, clientID, secret, redirectURL, rf.flow)
 }

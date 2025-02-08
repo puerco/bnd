@@ -60,7 +60,7 @@ func (vo *verifcationOptions) AddFlags(cmd *cobra.Command) {
 }
 
 func (vo *verifcationOptions) Validate() error {
-	var errs = []error{}
+	errs := []error{}
 	if vo.ExpectedIssuer != "" && vo.ExpectedIssuerRegex != "" {
 		errs = append(errs, errors.New("only one of issuer or issuer-regexp can be set at the same"))
 	}

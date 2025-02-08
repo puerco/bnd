@@ -85,7 +85,7 @@ func (t *Tool) ExtractPredicate(bndl attestation.Envelope) (attestation.Predicat
 }
 
 // ParseAttestation reads an attestation from the Reader r and
-func (t *Tool) ParseAttestation(r io.Reader) (*intoto.Statement, error) {
+func (t *Tool) ParseAttestation(r io.Reader) (attestation.Statement, error) {
 	p := intoto.Parser{}
 
 	data, err := io.ReadAll(r)
@@ -96,7 +96,7 @@ func (t *Tool) ParseAttestation(r io.Reader) (*intoto.Statement, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing statement: %w", err)
 	}
-	return statement.(*intoto.Statement), nil
+	return statement, nil
 }
 
 // ExtractAttestation returns a strut with the data decoded from the bundle

@@ -45,7 +45,7 @@ func (s *Signer) SignStatement(data []byte) (*v1.Bundle, error) {
 	if err := s.Options.Validate(); err != nil {
 		return nil, err
 	}
-	// check statement (not emtpy is it intoto)
+	// check that statement is not empty and it is an intoto attestation
 	if err := s.bundleSigner.VerifyContent(&s.Options, data); err != nil {
 		return nil, fmt.Errorf("verifying content: %w", err)
 	}
@@ -75,7 +75,7 @@ func (s *Signer) SignStatement(data []byte) (*v1.Bundle, error) {
 		return nil, fmt.Errorf("building options: %w", err)
 	}
 
-	bndl, err := s.bundleSigner.SignBundle(content, keypair, *bundleSignerOption)
+	bndl, err := s.bundleSigner.SignBundle(content, keypair, bundleSignerOption)
 	if err != nil {
 		return nil, fmt.Errorf("singing statement: %w", err)
 	}

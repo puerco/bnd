@@ -39,6 +39,9 @@ func (bv *bundleVerifier) OpenBundle(path string) (*bundle.Bundle, error) {
 // TODO(puerco): Abstract the returned verifier
 func (bv *bundleVerifier) BuildSigstoreVerifier(opts *VerificationOptions) (VerifyCapable, error) {
 	trustedMaterial, err := bv.assembleTrustedMaterial(opts)
+	if err != nil {
+		return nil, fmt.Errorf("building trusted materials: %w", err)
+	}
 	if len(trustedMaterial) == 0 {
 		return nil, errors.New("no trusted material assembled")
 	}
@@ -52,7 +55,7 @@ func (bv *bundleVerifier) BuildSigstoreVerifier(opts *VerificationOptions) (Veri
 }
 
 func (bv *bundleVerifier) assembleTrustedMaterial(opts *VerificationOptions) (root.TrustedMaterialCollection, error) {
-	var trustedMaterial = make(root.TrustedMaterialCollection, 0)
+	trustedMaterial := make(root.TrustedMaterialCollection, 0)
 
 	// Fetch the trusted root data
 	data, err := GetTufRoot(&opts.TufOptions)
@@ -101,11 +104,12 @@ func (bv *bundleVerifier) RunVerification(opts *VerificationOptions, sigstoreVer
 
 	// Build the identity policy if set in the options
 	identityPolicies := []verify.PolicyOption{}
-	if opts.SkipIdentityCheck {
+	switch {
+	case opts.SkipIdentityCheck:
 		logrus.Debug("No identity defined, signier identity will not be checked")
 		identityPolicies = append(identityPolicies, verify.WithoutIdentitiesUnsafe())
-	} else if opts.ExpectedIssuer != "" || opts.ExpectedIssuerRegex != "" ||
-		opts.ExpectedSan != "" || opts.ExpectedSanRegex != "" {
+	case opts.ExpectedIssuer != "" || opts.ExpectedIssuerRegex != "" ||
+		opts.ExpectedSan != "" || opts.ExpectedSanRegex != "":
 		expectedIdentity, err := verify.NewShortCertificateIdentity(
 			opts.ExpectedIssuer,      // Issuer
 			opts.ExpectedIssuerRegex, // issuerRegex
@@ -116,7 +120,7 @@ func (bv *bundleVerifier) RunVerification(opts *VerificationOptions, sigstoreVer
 			return nil, fmt.Errorf("creating expected identity: %w", err)
 		}
 		identityPolicies = append(identityPolicies, verify.WithCertificateIdentity(expectedIdentity))
-	} else {
+	default:
 		return nil, fmt.Errorf("expected certificate issuer/identity not defined")
 	}
 

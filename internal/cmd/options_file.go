@@ -100,7 +100,7 @@ func (o *bundleOptions) ReadBundle() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("opening bundle file: %w", err)
 		}
-		defer f.(*os.File).Close()
+		defer f.(*os.File).Close() //nolint:errcheck
 	}
 
 	bundle, err := io.ReadAll(f)
@@ -108,5 +108,4 @@ func (o *bundleOptions) ReadBundle() ([]byte, error) {
 		return nil, fmt.Errorf("reading bundle data: %s", err)
 	}
 	return bundle, nil
-
 }

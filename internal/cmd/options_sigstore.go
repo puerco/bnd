@@ -30,12 +30,11 @@ func (so *sigstoreOptions) AddFlags(cmd *cobra.Command) {
 }
 
 func (so *sigstoreOptions) Validate() error {
-	var errs = []error{}
+	errs := []error{}
 	if so.TufRootURL != "" {
 		if _, err := url.Parse(so.TufRootURL); err != nil {
 			errs = append(errs, fmt.Errorf("parsing tuf URL: %w", err))
 		}
-
 	}
 	return errors.Join(errs...)
 }

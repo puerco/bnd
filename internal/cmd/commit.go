@@ -41,10 +41,12 @@ type commitOptions struct {
 // Validate checks the options
 func (co *commitOptions) Validate() error {
 	errs := []error{}
-	errs = append(errs, co.signOptions.Validate())
-	errs = append(errs, co.predicateFileOptions.Validate())
-	errs = append(errs, co.outFileOptions.Validate())
-	errs = append(errs, co.sigstoreOptions.Validate())
+	errs = append(errs,
+		co.signOptions.Validate(),
+		co.predicateFileOptions.Validate(),
+		co.outFileOptions.Validate(),
+		co.sigstoreOptions.Validate(),
+	)
 
 	if co.Sha != "" && co.Tag != "" {
 		errs = append(errs, errors.New("only tag or commit hash can be specified at the same time"))
@@ -105,7 +107,7 @@ This is not intended to replace commit signing tools such as gittuf or
 gitsign but rather to make it easy to associate predicates with a repository's
 history.
 
-The predicate data can be read from commited files or can be supplied externally.
+The predicate data can be read from committed files or can be supplied externally.
 The commit subcommmand can clone local or remote repositories. It can also
 resolve tags, generating the correct subjects with their current hash.
 
@@ -124,7 +126,7 @@ Attest to git tag v1 reading the predicate from data.json:
 
   %s commit --repo=http://github.com/example/test --tag=v1 --predicate=data.json
 
-Create an attestation for tag v1, reading the predicate from a commited file:
+Create an attestation for tag v1, reading the predicate from a committed file:
 
   %s commit --repo=http://github.com/example/test --tag=v1 --predicate-git-path=pred.json
 
@@ -276,7 +278,7 @@ Same, but cloning the repo from a local clone:
 
 // makeVCSLocator builds the repository VCS locator from the available data
 func makeVCSLocator(opts *commitOptions, head *git.HeadDetails, remoteReader func(string) (map[string]string, error)) (string, error) {
-	var sourceURL = ""
+	sourceURL := ""
 	if opts.repoURL != "" {
 		sourceURL = opts.repoURL
 	} else {

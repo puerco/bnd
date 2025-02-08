@@ -14,8 +14,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type Client struct {
-}
+type Client struct{}
 
 func New() *Client {
 	return &Client{}
@@ -31,7 +30,6 @@ func (c *Client) Call(ctx context.Context) error {
 	))
 	client := github.NewClient(oauthClient)
 
-	// att, err := os.Open("/home/urbano/Projects/bind/test.bundle.json")
 	attData, err := os.ReadFile("/home/urbano/Projects/bind/test.bundle.json")
 	if err != nil {
 		return fmt.Errorf("reading bundle file: %w", err)
@@ -44,6 +42,7 @@ func (c *Client) Call(ctx context.Context) error {
 		// "https://api.github.com/repos/puerco/tests/attestations/sha256:62f2924a0bc60cc14ddb236044486c221766a0f86480446bc36f3d7824d51aa6",
 		"https://api.github.com/repos/puerco/lab/attestations", vals,
 
+		//nolint: gocritic
 		// /repos/{owner}/{repo}/attestations
 		//"application/vnd.dev.sigstore.bundle+json;version=0.2", att,
 		//"application/vnd.dev.sigstore.bundle.v0.2+json", att,
@@ -53,8 +52,12 @@ func (c *Client) Call(ctx context.Context) error {
 		return fmt.Errorf("errror posting attestion: %w", err)
 	}
 	fmt.Printf("No error, pero esto:\n%+v", res)
-	b, _ := io.ReadAll(res.Body)
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		return fmt.Errorf("reading response: %w", err)
+	}
 	fmt.Printf("No error, pero esto:\n%+v", string(b))
+	//nolint: gocritic
 	/*
 
 		user, _, err := client.Users.Get(ctx, "")
