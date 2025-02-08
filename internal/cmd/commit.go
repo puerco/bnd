@@ -94,7 +94,7 @@ func addCommit(parentCmd *cobra.Command) {
 		remoteNames: []string{"upstream", "origin"},
 	}
 	commitCmd := &cobra.Command{
-		Short: "attests to data of a commit",
+		Short: "attest git commits",
 		Long: fmt.Sprintf(`
 🥨 %s commit
 
@@ -215,29 +215,33 @@ Same, but cloning the repo from a local clone:
 
 			// Create the new attestation
 			statement := intoto.NewStatement(intoto.WithPredicate(pred))
+			statement.Type = "https://in-toto.io/Statement/v1"
+			statement.PredicateType = attestation.PredicateType(opts.PredicateType)
 
 			head, err := git.GetHeadDetails(opts.clonePath)
 			if err != nil {
 				return fmt.Errorf("getting repo details: %w", err)
 			}
 
-			// TODO(puerco): Create the download location URI
+			locator, err := makeVCSLocator(opts, head, git.GetRemotes)
+			if err != nil {
+				logrus.Errorf("error forming VCS locator: %v", err)
+			}
+			name := head.CommitSHA
+			if head.Tag != "" {
+				name = head.Tag
+			}
 			subject := &v1.ResourceDescriptor{
-				Uri: opts.repoURL,
+				Name:             name,
+				Uri:              locator,
+				DownloadLocation: locator,
 				Digest: map[string]string{
 					"sha1":      head.CommitSHA,
 					"gitCommit": head.CommitSHA,
 				},
 			}
 
-			locator, err := makeVCSLocator(opts, head, git.GetRemotes)
-			if err == nil {
-				subject.Uri = locator
-			} else {
-				logrus.Errorf("error forming VCS locator: %v", err)
-			}
-
-			statement.Subject = append(statement.Subject, subject)
+			statement.AddSubject(subject)
 
 			// Marshal the attestation data
 			attData, err := statement.ToJson()
@@ -314,7 +318,4 @@ func makeVCSLocator(opts *commitOptions, head *git.HeadDetails, remoteReader fun
 	}
 
 	return "git+" + u.String() + "@" + head.CommitSHA, nil
-
-	// if its local, use the remotes
-
 }
