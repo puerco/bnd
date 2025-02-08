@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/carabiner-dev/bind/internal/git"
+	"github.com/carabiner-dev/bnd/internal/git"
 	"github.com/stretchr/testify/require"
 )
 

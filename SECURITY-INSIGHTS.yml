@@ -17,7 +17,7 @@ project:
     bug-bounty-available: false
 
 repository:
-  url: https://github.com/carabiner-dev/bind
+  url: https://github.com/carabiner-dev/bnd
   status: active
   accepts-change-request: true
   accepts-automated-change-request: true
@@ -35,5 +35,5 @@ repository:
     governance: ""
     dependency-management-policy: ""
   distribution-points:
-    - uri:  https://github.com/carabiner-dev/bind/releases
+    - uri:  https://github.com/carabiner-dev/bnd/releases
       comment: GitHub Release Page

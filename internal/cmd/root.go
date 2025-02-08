@@ -6,24 +6,24 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/carabiner-dev/bind/pkg/bind"
+	"github.com/carabiner-dev/bnd/pkg/bnd"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/log"
 	"sigs.k8s.io/release-utils/version"
 )
 
-const appname = "bind"
+const appname = "bnd"
 
 var rootCmd = &cobra.Command{
 	Short: fmt.Sprintf("%s: a utility to work with sigstore bundles", appname),
 	Long: fmt.Sprintf(`
 🥨 %s: a utility to work with attestations and sigstore bundles.
 	
-bind is a utility that makes it easy to work with attestations and sigstore bundles.
-It can create new bundles by "binding" a sattement, signing it and wrappring it
-in a bundle. It can verify existing bundles, extract data from them and inspect
-their contents.
+bnd (pronounced bind) is a utility that makes it easy to work with attestations
+and sigstore bundles. It can create new bundles by "binding" a sattement, signing
+it and wrappring it in a bundle. It can verify existing bundles, extract data
+from them and inspect their contents.
 
 `, appname),
 	Use:               appname,
@@ -80,9 +80,9 @@ func Execute() {
 	}
 }
 
-// getSigner builds a bind signer from a sigstore options set
-func getSigner(opts *sigstoreOptions, sopts *signOptions) *bind.Signer {
-	signer := bind.NewSigner()
+// getSigner builds a bnd signer from a sigstore options set
+func getSigner(opts *sigstoreOptions, sopts *signOptions) *bnd.Signer {
+	signer := bnd.NewSigner()
 	signer.Options.TufRootPath = opts.TufRootPath
 	signer.Options.TufRootURL = opts.TufRootURL
 	signer.Options.OidcClientID = sopts.OidcClientID

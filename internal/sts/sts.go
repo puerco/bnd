@@ -6,7 +6,7 @@ package sts
 import (
 	"context"
 
-	"github.com/carabiner-dev/bind/internal/sts/providers/github"
+	"github.com/carabiner-dev/bnd/internal/sts/providers/github"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 )
 

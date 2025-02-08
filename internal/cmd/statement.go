@@ -46,7 +46,7 @@ func (so *statementOptions) AddFlags(cmd *cobra.Command) {
 func addStatement(parentCmd *cobra.Command) {
 	opts := &statementOptions{}
 	attCmd := &cobra.Command{
-		Short:             fmt.Sprintf("%s statement: binds an in-toto attestation in a signed bundle", appname),
+		Short:             "binds an in-toto attestation in a signed bundle",
 		Use:               "statement",
 		Example:           fmt.Sprintf("%s statement file.intoto.json ", appname),
 		SilenceUsage:      false,

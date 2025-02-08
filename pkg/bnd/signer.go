@@ -1,0 +1,83 @@
+// SPDX-FileCopyrightText: Copyright 2025 Carabiner Systems, Inc
+// SPDX-License-Identifier: Apache-2.0
+
+package bnd
+
+import (
+	"fmt"
+	"io"
+
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	"google.golang.org/protobuf/encoding/protojson"
+)
+
+const GitHubTimeStamperURL = "https://timestamp.githubapp.com/api/v1/timestamp"
+
+func NewSigner() *Signer {
+	return &Signer{
+		Options:      DefaultSignerOptions,
+		bundleSigner: &bundleSigner{},
+	}
+}
+
+type Signer struct {
+	Options      SignerOptions
+	bundleSigner BundleSigner
+}
+
+// WriteBundle writes the bundle JSON to
+func (s *Signer) WriteBundle(bndl *v1.Bundle, w io.Writer) error {
+	bundleJSON, err := protojson.Marshal(bndl)
+	if err != nil {
+		return fmt.Errorf("marshaling bundle: %w", err)
+	}
+
+	if _, err := w.Write(bundleJSON); err != nil {
+		return fmt.Errorf("writing bundle: %w", err)
+	}
+
+	return nil
+}
+
+// VerifyBundle verifies a signed bundle containing a dsse envelope
+func (s *Signer) SignStatement(data []byte) (*v1.Bundle, error) {
+	// Verify the defined options:
+	if err := s.Options.Validate(); err != nil {
+		return nil, err
+	}
+	// check statement (not emtpy is it intoto)
+	if err := s.bundleSigner.VerifyContent(&s.Options, data); err != nil {
+		return nil, fmt.Errorf("verifying content: %w", err)
+	}
+
+	// Wrap the attestation in its DSSE envelope
+	content := s.bundleSigner.WrapStatement(data)
+
+	// Get(or generate) the public key
+	keypair, err := s.bundleSigner.GetKeyPair(&s.Options)
+	if err != nil {
+		return nil, err
+	}
+
+	// Run the STS providers to check for ambien credentials
+	if err := s.bundleSigner.GetAmbienTokens(&s.Options); err != nil {
+		return nil, fmt.Errorf("fetching ambien credentials: %w", err)
+	}
+
+	// Get the ID token
+	if err := s.bundleSigner.GetOidcToken(&s.Options); err != nil {
+		return nil, fmt.Errorf("getting ID token: %w", err)
+	}
+
+	// Generate the signer options
+	bundleSignerOption, err := s.bundleSigner.BuildSigstoreSignerOptions(&s.Options)
+	if err != nil {
+		return nil, fmt.Errorf("building options: %w", err)
+	}
+
+	bndl, err := s.bundleSigner.SignBundle(content, keypair, *bundleSignerOption)
+	if err != nil {
+		return nil, fmt.Errorf("singing statement: %w", err)
+	}
+	return bndl, nil
+}

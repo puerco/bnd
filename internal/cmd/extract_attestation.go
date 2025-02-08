@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/carabiner-dev/bind/pkg/bundle"
+	"github.com/carabiner-dev/bnd/pkg/bundle"
 	"github.com/spf13/cobra"
 )
 

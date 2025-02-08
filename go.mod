@@ -1,4 +1,4 @@
-module github.com/carabiner-dev/bind
+module github.com/carabiner-dev/bnd
 
 go 1.23.5
 

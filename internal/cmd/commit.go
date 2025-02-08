@@ -12,7 +12,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/carabiner-dev/bind/internal/git"
+	"github.com/carabiner-dev/bnd/internal/git"
 	v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/puerco/ampel/pkg/attestation"
 	"github.com/puerco/ampel/pkg/formats/predicate"
