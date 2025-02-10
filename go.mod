@@ -2,15 +2,13 @@ module github.com/carabiner-dev/bnd
 
 go 1.23.5
 
-replace github.com/carbiner-dev/ampel => ../ampel/
-
-replace github.com/puerco/ampel => ../ampel/
+replace github.com/carabiner-dev/ampel => ../ampel/
 
 require (
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/go-github/v60 v60.0.0
 	github.com/in-toto/attestation v1.1.1-0.20250116170412-11ca4fce9b7a
-	github.com/puerco/ampel v0.0.0-00010101000000-000000000000
+	github.com/carabiner-dev/ampel v0.0.0-00010101000000-000000000000
 	github.com/sigstore/protobuf-specs v0.4.0
 	github.com/sigstore/sigstore v1.8.12
 	github.com/sigstore/sigstore-go v0.7.0

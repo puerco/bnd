@@ -10,10 +10,10 @@ import (
 	"io"
 	"os"
 
+	"github.com/carabiner-dev/ampel/pkg/attestation"
+	"github.com/carabiner-dev/ampel/pkg/formats/predicate"
+	"github.com/carabiner-dev/ampel/pkg/formats/statement/intoto"
 	v1 "github.com/in-toto/attestation/go/v1"
-	"github.com/puerco/ampel/pkg/attestation"
-	"github.com/puerco/ampel/pkg/formats/predicate"
-	"github.com/puerco/ampel/pkg/formats/statement/intoto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert/yaml"

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	ampelb "github.com/carabiner-dev/ampel/pkg/formats/envelope/bundle"
 	"github.com/carabiner-dev/bnd/pkg/bundle"
-	ampelb "github.com/puerco/ampel/pkg/formats/envelope/bundle"
 	"github.com/spf13/cobra"
 )
 

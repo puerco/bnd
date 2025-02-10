@@ -12,9 +12,9 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sirupsen/logrus"
 
-	"github.com/puerco/ampel/pkg/attestation"
-	ampelb "github.com/puerco/ampel/pkg/formats/envelope/bundle"
-	"github.com/puerco/ampel/pkg/formats/statement/intoto"
+	"github.com/carabiner-dev/ampel/pkg/attestation"
+	ampelb "github.com/carabiner-dev/ampel/pkg/formats/envelope/bundle"
+	"github.com/carabiner-dev/ampel/pkg/formats/statement/intoto"
 )
 
 type Tool struct{}
