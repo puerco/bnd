@@ -6,7 +6,7 @@ replace github.com/carabiner-dev/ampel => ../ampel/
 
 require (
 	github.com/carabiner-dev/ampel v0.0.0-00010101000000-000000000000
-	github.com/carabiner-dev/github v0.0.0-20250210221216-75be779c768b
+	github.com/carabiner-dev/github v0.0.0-20250210222226-442fdacc1d16
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/in-toto/attestation v1.1.1-0.20250116170412-11ca4fce9b7a
 	github.com/sigstore/protobuf-specs v0.4.0
