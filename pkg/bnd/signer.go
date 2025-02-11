@@ -39,7 +39,16 @@ func (s *Signer) WriteBundle(bndl *v1.Bundle, w io.Writer) error {
 	return nil
 }
 
-// VerifyBundle verifies a signed bundle containing a dsse envelope
+// SignStatement signs a statement using the configured options and
+// returns a bundle. The signing process will try to obtain the
+// signer identity in this order:
+//
+//  1. Try the configured ambient credentials providers
+//     (currently only the GitHub actions plugin is supported).
+//  2. If a terminal is detected, it will start the sigstore oidc
+//     flow in a browser.
+//  3. If no terminal is detected, it will start the sigstore device
+//     flow.
 func (s *Signer) SignStatement(data []byte) (*v1.Bundle, error) {
 	// Verify the defined options:
 	if err := s.Options.Validate(); err != nil {
