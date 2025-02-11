@@ -48,9 +48,9 @@ func (o *pushOptions) AddFlags(cmd *cobra.Command) {
 		"repo", "r", "", "repository name",
 	)
 
-	cmd.PersistentFlags().StringVarP(
+	cmd.PersistentFlags().StringVar(
 		&o.RepoOrg,
-		"org", "o", "", "repository organization",
+		"org", "", "repository organization",
 	)
 }
 
