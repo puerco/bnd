@@ -2,10 +2,8 @@ module github.com/carabiner-dev/bnd
 
 go 1.23.5
 
-replace github.com/carabiner-dev/ampel => ../ampel/
-
 require (
-	github.com/carabiner-dev/ampel v0.0.0-00010101000000-000000000000
+	github.com/carabiner-dev/ampel v0.0.0-20250209210344-7b306497c927
 	github.com/carabiner-dev/github v0.0.0-20250210222226-442fdacc1d16
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/in-toto/attestation v1.1.1-0.20250116170412-11ca4fce9b7a
