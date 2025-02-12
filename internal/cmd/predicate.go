@@ -41,6 +41,11 @@ func (po *predicateOptions) Validate() error {
 	if len(po.SubjectHashes) == 0 {
 		errs = append(errs, errors.New("no subjects specified"))
 	}
+
+	if po.PredicatePath == "" {
+		return fmt.Errorf("no predicate file specified")
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -70,15 +75,11 @@ func addPredicate(parentCmd *cobra.Command) {
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
 		RunE: func(_ *cobra.Command, args []string) error {
-			if len(args) == 0 && opts.PredicatePath == "" {
-				return fmt.Errorf("no predicate file specified")
-			}
-
-			if len(args) > 0 && opts.PredicatePath != "" {
+			if len(args) > 0 && opts.PredicatePath == "" {
 				opts.PredicatePath = args[0]
 			}
 
-			if len(args) > 0 && args[0] != opts.PredicatePath {
+			if len(args) > 0 && opts.PredicatePath != "" && args[0] != opts.PredicatePath {
 				return fmt.Errorf("predicate specified twice (-p and argument)")
 			}
 
