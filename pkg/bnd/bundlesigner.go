@@ -212,6 +212,6 @@ type oidcConnector struct {
 	flow oauthflow.TokenGetter
 }
 
-func (rf *oidcConnector) Connect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
-	return oauthflow.OIDConnect(url, clientID, secret, redirectURL, rf.flow)
+func (rf *oidcConnector) Connect(urlString, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
+	return oauthflow.OIDConnect(urlString, clientID, secret, redirectURL, rf.flow)
 }
