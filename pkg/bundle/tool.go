@@ -4,9 +4,12 @@
 package bundle
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	// "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -116,4 +119,28 @@ func (t *Tool) ExtractAttestationJSON(bundle *protobundle.Bundle) ([]byte, error
 	}
 
 	return dssePayload.DsseEnvelope.Payload, nil
+}
+
+// FlattenJSON flattens a JSON document into a single line, suitable to add to
+// a jsonl file.
+func (t *Tool) FlattenJSONStream(r io.Reader) io.Reader {
+	newInput := ""
+	scanner := bufio.NewScanner(r)
+	buf := make([]byte, 0, 64*1024)
+	// Increase the buf max value to 10 mb just in case
+	// we encounter huge lines
+	scanner.Buffer(buf, 1024*1024*10)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		newInput += line + " "
+	}
+	return strings.NewReader(newInput)
+}
+
+func (t *Tool) FlattenJSON(data []byte) ([]byte, error) {
+	r := t.FlattenJSONStream(bytes.NewReader(data))
+	return io.ReadAll(r)
 }
