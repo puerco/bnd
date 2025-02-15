@@ -10,13 +10,15 @@ import (
 	"io"
 	"os"
 
-	"github.com/carabiner-dev/ampel/pkg/attestation"
-	"github.com/carabiner-dev/ampel/pkg/formats/predicate"
-	"github.com/carabiner-dev/ampel/pkg/formats/statement/intoto"
 	v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert/yaml"
+
+	"github.com/carabiner-dev/ampel/pkg/attestation"
+	"github.com/carabiner-dev/ampel/pkg/formats/predicate"
+	"github.com/carabiner-dev/ampel/pkg/formats/statement/intoto"
+	"github.com/carabiner-dev/hasher"
 )
 
 type predicateOptions struct {
@@ -38,7 +40,7 @@ func (po *predicateOptions) Validate() error {
 		po.outFileOptions.Validate(),
 	)
 
-	if len(po.SubjectHashes) == 0 {
+	if len(po.SubjectHashes) == 0 && len(po.SubjectPaths) == 0 {
 		errs = append(errs, errors.New("no subjects specified"))
 	}
 
@@ -63,6 +65,10 @@ func (po *predicateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(
 		&po.SubjectAlgorithm, "hash-algo", "sha256", "algorithm used to hash the subjects",
 	)
+
+	cmd.PersistentFlags().StringSliceVarP(
+		&po.SubjectPaths, "subject-file", "f", []string{}, "path to files to use as subjects",
+	)
 }
 
 func addPredicate(parentCmd *cobra.Command) {
@@ -74,7 +80,7 @@ func addPredicate(parentCmd *cobra.Command) {
 		SilenceUsage:      false,
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
-		RunE: func(_ *cobra.Command, args []string) error {
+		PreRunE: func(_ *cobra.Command, args []string) error {
 			if len(args) > 0 && opts.PredicatePath == "" {
 				opts.PredicatePath = args[0]
 			}
@@ -83,6 +89,9 @@ func addPredicate(parentCmd *cobra.Command) {
 				return fmt.Errorf("predicate specified twice (-p and argument)")
 			}
 
+			return nil
+		},
+		RunE: func(_ *cobra.Command, args []string) error {
 			// Validate the options
 			if err := opts.Validate(); err != nil {
 				return err
@@ -130,6 +139,14 @@ func addPredicate(parentCmd *cobra.Command) {
 					},
 				})
 			}
+
+			// Generate the subjects of files passed in the arguments:
+			hshr := hasher.New()
+			hashes, err := hshr.HashFiles(opts.SubjectPaths)
+			if err != nil {
+				return fmt.Errorf("hashing passed files: %w", err)
+			}
+			statement.Subject = append(statement.Subject, hashes.ToResourceDescriptors()...)
 
 			// Marshal the attestation data
 			attData, err := statement.ToJson()
