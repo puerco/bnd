@@ -69,7 +69,6 @@ but more drivers are on the way.
 		Use:           "push [flags] [org/repo [bundle.json...]]",
 		SilenceUsage:  false,
 		SilenceErrors: true,
-		Hidden:        true,
 		Example: fmt.Sprintf(`
 Push an attestation bundle to GitHub:
 
