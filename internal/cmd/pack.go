@@ -103,7 +103,9 @@ Same but with shortcut positional arguments:
 				if _, err := io.Copy(out, tool.FlattenJSONStream(f)); err != nil {
 					return fmt.Errorf("copying data to file: %w", err)
 				}
-				io.WriteString(out, "\n")
+				if _, err := io.WriteString(out, "\n"); err != nil {
+					return err
+				}
 			}
 			return nil
 		},

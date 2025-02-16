@@ -19,9 +19,10 @@ func TestFlattenStream(t *testing.T) {
 		input func(t *testing.T) []byte
 	}{
 		{"simple", func(t *testing.T) []byte { t.Helper(); return []byte("{\n  \"name\": \"john doe\"\n}") }},
-		{"two-deep", func(t *testing.T) []byte {
-			t.Helper()
-			return []byte(`{
+		{
+			"two-deep", func(t *testing.T) []byte {
+				t.Helper()
+				return []byte(`{
 		"this": {
 			"can": {
 				"host": 1,
@@ -30,7 +31,7 @@ func TestFlattenStream(t *testing.T) {
 			}
 		}
 }`)
-		},
+			},
 		},
 		{"bundle", func(t *testing.T) []byte {
 			t.Helper()
@@ -49,7 +50,7 @@ func TestFlattenStream(t *testing.T) {
 			var want, got any
 
 			require.NoError(t, json.Unmarshal(tc.input(t), &want))
-			require.NoError(t, json.Unmarshal([]byte(res), &got))
+			require.NoError(t, json.Unmarshal(res, &got))
 
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("got %q but expected %q", got, want)
