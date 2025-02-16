@@ -9,10 +9,10 @@ existing bundles, extract data from them inspect their contents.
 ```
 🥨 bnd: a utility to work with attestations and sigstore bundles.
 	
-bnd is a utility that makes it easy to work with attestations and sigstore bundles.
-It can create new bundles by "binding" a sattement, signing it and wrappring it
-in a bundle. It can verify existing bundles, extract data from them and inspect
-their contents.
+bnd (pronounced bind) is a utility that makes it easy to work with attestations
+and sigstore bundles. It can create new bundles by "binding" a sattement, signing
+it and wrappring it in a bundle. It can verify existing bundles, extract data
+from them and inspect their contents.
 
 Usage:
   bnd [command]
@@ -22,12 +22,12 @@ Examples:
 Create a new bundle by signing and bundling an attestation and its verification
 material:
 
-	bnd statement --out=bundle.json statement.intoto.json
+  bnd statement --out=bundle.json statement.intoto.json
 
 Inspect the resulting bundle:
 
-	bnd inspect bundle.json
-	
+  bnd inspect bundle.json
+
 Extract the in-toto attestation from the bundle:
 
   bnd extract attestation bundle.json
@@ -36,15 +36,15 @@ Extract the predicate data from the bundle:
 
   bnd extract predicate bundle.json
 
-
 Available Commands:
-  commit      attests to data of a commit
+  commit      attest git commits
   completion  Generate the autocompletion script for the specified shell
   extract     extract data from sigstore bundles
   help        Help about any command
   inspect     prints useful information about a bundle
+  pack        packs one or more bundles into a jsonl formatted file
   predicate   packs a new attestation into a bundle from a JSON predicate
-  push        push pushes an attestation or bundle to github or an OCI registry
+  push        pushes an attestation or bundle to github or an OCI registry
   statement   binds an in-toto attestation in a signed bundle
   verify      Verifies a bundle signature
   version     Prints the version
