@@ -119,6 +119,6 @@ Same but with shortcut positional arguments:
 			return nil
 		},
 	}
-	opts.AddFlags(parentCmd)
+	opts.AddFlags(pushCmd)
 	parentCmd.AddCommand(pushCmd)
 }
