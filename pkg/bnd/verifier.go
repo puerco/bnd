@@ -6,6 +6,8 @@ package bnd
 import (
 	"fmt"
 
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/verify"
 )
 
@@ -26,18 +28,41 @@ type Verifier struct {
 }
 
 // VerifyBundle verifies a signed bundle containing a dsse envelope
-func (v *Verifier) VerifyBundle(budlePath string) (*verify.VerificationResult, error) {
-	bndl, err := v.bundleVerifier.OpenBundle(budlePath)
+func (v *Verifier) VerifyBundle(bundlePath string) (*verify.VerificationResult, error) {
+	bndl, err := v.bundleVerifier.OpenBundle(bundlePath)
 	if err != nil {
 		return nil, fmt.Errorf("opening bundle: %w", err)
 	}
 
 	vrfr, err := v.bundleVerifier.BuildSigstoreVerifier(&v.Options)
 	if err != nil {
-		return nil, fmt.Errorf("creatging creating verifier: %w", err)
+		return nil, fmt.Errorf("creating verifier: %w", err)
 	}
 
 	result, err := v.bundleVerifier.RunVerification(&v.Options, vrfr, bndl)
+	if err != nil {
+		return nil, fmt.Errorf("verifying bundle: %w", err)
+	}
+
+	return result, err
+}
+
+// VerifyBundle verifies a signed bundle containing a dsse envelope
+func (v *Verifier) VerifyInlineBundle(bundleContents []byte) (*verify.VerificationResult, error) {
+	var bndl bundle.Bundle
+	bndl.Bundle = new(protobundle.Bundle)
+
+	err := bndl.UnmarshalJSON(bundleContents)
+	if err != nil {
+		return nil, err
+	}
+
+	vrfr, err := v.bundleVerifier.BuildSigstoreVerifier(&v.Options)
+	if err != nil {
+		return nil, fmt.Errorf("creating verifier: %w", err)
+	}
+
+	result, err := v.bundleVerifier.RunVerification(&v.Options, vrfr, &bndl)
 	if err != nil {
 		return nil, fmt.Errorf("verifying bundle: %w", err)
 	}
