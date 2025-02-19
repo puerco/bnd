@@ -6,7 +6,6 @@ package bnd
 import (
 	"fmt"
 
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/verify"
 )
@@ -50,7 +49,6 @@ func (v *Verifier) VerifyBundle(bundlePath string) (*verify.VerificationResult, 
 // VerifyBundle verifies a signed bundle containing a dsse envelope
 func (v *Verifier) VerifyInlineBundle(bundleContents []byte) (*verify.VerificationResult, error) {
 	var bndl bundle.Bundle
-	bndl.Bundle = new(protobundle.Bundle)
 
 	err := bndl.UnmarshalJSON(bundleContents)
 	if err != nil {
