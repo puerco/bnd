@@ -52,7 +52,7 @@ func (v *Verifier) VerifyInlineBundle(bundleContents []byte) (*verify.Verificati
 
 	err := bndl.UnmarshalJSON(bundleContents)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshaling JSON: %w", err)
 	}
 
 	vrfr, err := v.bundleVerifier.BuildSigstoreVerifier(&v.Options)
