@@ -85,7 +85,11 @@ data about the bundle.
 			fmt.Println("\nBundle Details:")
 			fmt.Println("---------------")
 			fmt.Printf("Bundle media type: %s\n", mediatype)
-			fmt.Printf("Attestation predicate: %s\n", att.GetPredicateType())
+			if att != nil {
+				fmt.Printf("Attestation predicate: %s\n", att.GetPredicateType())
+			} else {
+				fmt.Println("No attestation found in envelope")
+			}
 			fmt.Println("")
 			return nil
 		},
