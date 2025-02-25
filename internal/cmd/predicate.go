@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 
 	v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert/yaml"
+	"sigs.k8s.io/release-utils/util"
 
 	"github.com/carabiner-dev/ampel/pkg/attestation"
 	"github.com/carabiner-dev/ampel/pkg/formats/predicate"
@@ -26,9 +28,27 @@ type predicateOptions struct {
 	sigstoreOptions
 	outFileOptions
 	predicateFileOptions
+	SubjectValues    []string
 	SubjectHashes    []string
 	SubjectPaths     []string
 	SubjectAlgorithm string
+}
+
+func (po *predicateOptions) SubjectValuesToDigests() []map[string]string {
+	if hashRegex == nil {
+		hashRegex = regexp.MustCompile(hashRegexStr)
+	}
+	ret := []map[string]string{}
+	for _, v := range po.SubjectValues {
+		pts := hashRegex.FindStringSubmatch(v)
+		if pts == nil {
+			continue
+		}
+		ret = append(ret, map[string]string{
+			pts[1]: pts[2],
+		})
+	}
+	return ret
 }
 
 // Validates the options in context with arguments
@@ -40,7 +60,7 @@ func (po *predicateOptions) Validate() error {
 		po.outFileOptions.Validate(),
 	)
 
-	if len(po.SubjectHashes) == 0 && len(po.SubjectPaths) == 0 {
+	if len(po.SubjectHashes) == 0 && len(po.SubjectPaths) == 0 && len(po.SubjectValuesToDigests()) == 0 {
 		errs = append(errs, errors.New("no subjects specified"))
 	}
 
@@ -59,7 +79,11 @@ func (po *predicateOptions) AddFlags(cmd *cobra.Command) {
 	po.outFileOptions.AddFlags(cmd)
 
 	cmd.PersistentFlags().StringSliceVarP(
-		&po.SubjectHashes, "subject", "s", []string{}, "list of hashes to add as subjects ",
+		&po.SubjectValues, "subject", "s", []string{}, "list of hashes (algo:value) or paths to files to add as subjects ",
+	)
+
+	cmd.PersistentFlags().StringSliceVar(
+		&po.SubjectHashes, "hash-value", []string{}, "algorithm used to hash the subjects",
 	)
 
 	cmd.PersistentFlags().StringVar(
@@ -70,6 +94,12 @@ func (po *predicateOptions) AddFlags(cmd *cobra.Command) {
 		&po.SubjectPaths, "subject-file", "f", []string{}, "path to files to use as subjects",
 	)
 }
+
+// TODO:(move this to hasher)
+var (
+	hashRegexStr = `^(\bsha1\b|\bsha256\b|\bsha512\b|\bsha3\b|\bgitCommit\b):([a-f0-9]+)$`
+	hashRegex    *regexp.Regexp
+)
 
 func addPredicate(parentCmd *cobra.Command) {
 	opts := &predicateOptions{}
@@ -89,6 +119,26 @@ func addPredicate(parentCmd *cobra.Command) {
 				return fmt.Errorf("predicate specified twice (-p and argument)")
 			}
 
+			if hashRegex == nil {
+				hashRegex = regexp.MustCompile(hashRegexStr)
+			}
+			// Parse the values
+
+			// Transfer the files to the paths array
+			vals := []string{}
+			for _, v := range opts.SubjectValues {
+				if util.Exists(v) {
+					opts.SubjectPaths = append(opts.SubjectPaths, v)
+					continue
+				}
+				res := hashRegex.FindStringSubmatch(v)
+				if res == nil {
+					return fmt.Errorf("invalid subject: %q", v)
+				}
+				vals = append(vals, v)
+			}
+
+			opts.SubjectValues = vals
 			return nil
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -137,6 +187,13 @@ func addPredicate(parentCmd *cobra.Command) {
 					Digest: map[string]string{
 						opts.SubjectAlgorithm: s,
 					},
+				})
+			}
+
+			for _, h := range opts.SubjectValuesToDigests() {
+				logrus.Infof("added %+v", h)
+				statement.AddSubject(&v1.ResourceDescriptor{
+					Digest: h,
 				})
 			}
 
