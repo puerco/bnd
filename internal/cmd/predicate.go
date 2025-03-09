@@ -180,6 +180,9 @@ func addPredicate(parentCmd *cobra.Command) {
 
 			// Create the new attestation
 			statement := intoto.NewStatement(intoto.WithPredicate(pred))
+			if opts.PredicateType != "" {
+				statement.PredicateType = attestation.PredicateType(opts.PredicateType)
+			}
 
 			// Add the attestation subjects
 			for _, s := range opts.SubjectHashes {
