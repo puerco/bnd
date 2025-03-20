@@ -5,7 +5,7 @@ go 1.24
 toolchain go1.24.1
 
 require (
-	github.com/carabiner-dev/ampel v0.0.0-20250318182142-7927aa7308ef
+	github.com/carabiner-dev/ampel v0.0.0-20250320213412-e9bc7b33c9f8
 	github.com/carabiner-dev/github v0.2.0
 	github.com/carabiner-dev/hasher v0.1.0
 	github.com/go-git/go-git/v5 v5.14.0
