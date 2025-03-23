@@ -13,24 +13,31 @@ import (
 )
 
 type pushOptions struct {
-	Bundles  []string
+	Bundles []string
+}
+
+type pushGitHubOptions struct {
+	pushOptions
 	RepoName string
 	RepoOrg  string
 }
 
 // Validate the options in context with arguments
 func (o *pushOptions) Validate() error {
-	errs := []error{}
-
 	if len(o.Bundles) == 0 {
-		errs = append(errs, errors.New("no bundles specified"))
+		return errors.New("no bundles specified")
 	}
+	return nil
+}
 
-	if o.RepoName == "" {
+func (gho *pushGitHubOptions) Validate() error {
+	var errs = []error{}
+	errs = append(errs, gho.pushOptions.Validate())
+	if gho.RepoName == "" {
 		errs = append(errs, errors.New("repository name not set"))
 	}
 
-	if o.RepoOrg == "" {
+	if gho.RepoOrg == "" {
 		errs = append(errs, errors.New("repository organization not set"))
 	}
 
@@ -42,41 +49,53 @@ func (o *pushOptions) AddFlags(cmd *cobra.Command) {
 		&o.Bundles,
 		"bundle", "b", []string{}, "path to bundle",
 	)
+}
 
+func (gho *pushGitHubOptions) AddFlags(cmd *cobra.Command) {
+	gho.pushOptions.AddFlags(cmd)
 	cmd.PersistentFlags().StringVarP(
-		&o.RepoName,
+		&gho.RepoName,
 		"repo", "r", "", "repository name",
 	)
 
 	cmd.PersistentFlags().StringVar(
-		&o.RepoOrg,
+		&gho.RepoOrg,
 		"org", "", "repository organization",
 	)
 }
 
 func addPush(parentCmd *cobra.Command) {
-	opts := pushOptions{}
 	pushCmd := &cobra.Command{
-		Short: "pushes an attestation or bundle to github or an OCI registry",
+		Short: "pushes an attestation or bundle to a repository",
+		Use:   "push",
+	}
+	addGitHubPush(pushCmd)
+	parentCmd.AddCommand(pushCmd)
+}
+
+func addGitHubPush(parentCmd *cobra.Command) {
+	opts := pushGitHubOptions{}
+	pushCmd := &cobra.Command{
+		Short: "pushes bundle to the GitHub attestation store",
 		Long: fmt.Sprintf(`
-🥨 %s push: Push attestations and bundles to remote
+🥨 %s push: Push attestations and bundles to the GitHub attestation store.
 
 The push subcommand lets you send bundled attestations to remote storage
 locations. Initial support is provided for the GitHub attestation store
 but more drivers are on the way.
 
 `, appname),
-		Use:           "push [flags] [org/repo [bundle.json...]]",
+		Use:           "github [flags] [org/repo [bundle.json...]]",
 		SilenceUsage:  false,
 		SilenceErrors: true,
 		Example: fmt.Sprintf(`
 Push an attestation bundle to GitHub:
 
-%s push --bundle bundle.json --repo myorg --org repo
+%s push github --bundle bundle.json --repo myorg --org repo
 
 Same but with shortcut positional arguments:
 
-%s push myorg/repo bundle.json
+%s push github myorg/repo bundle.json
 
 `, appname, appname),
 		PersistentPreRunE: initLogging,
