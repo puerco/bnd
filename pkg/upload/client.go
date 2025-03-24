@@ -40,7 +40,7 @@ func (ppb preParsedBundle) MarshalJSON() ([]byte, error) {
 
 // PushFileToGithub posts an attestation to the GitHub store from a bundle
 // file.
-func (c *Client) PushBundleFileToGithub(repo, org, path string) error {
+func (c *Client) PushBundleFileToGithub(org, repo, path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("reading bundle: %w", err)
@@ -56,7 +56,23 @@ func (c *Client) PushBundleFileToGithub(repo, org, path string) error {
 	}
 
 	logrus.Debugf("Request body: %s", string(jsonData))
-	return c.pushAttestationToGitHub(repo, org, bytes.NewReader(jsonData))
+	return c.pushAttestationToGitHub(org, repo, bytes.NewReader(jsonData))
+}
+
+// PushFileToGithub posts an attestation to the GitHub store from a bundle
+// file.
+func (c *Client) PushBundleToGithub(org, repo string, data []byte) error {
+	payload := uploadRequestValueParsed{
+		Bundle: preParsedBundle(data),
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marhsaling payload: %w", err)
+	}
+
+	logrus.Debugf("Request body: %s", string(jsonData))
+	return c.pushAttestationToGitHub(org, repo, bytes.NewReader(jsonData))
 }
 
 // pushAttestationToGitHub reads a bundle from the reader r and posts it to the
