@@ -36,6 +36,7 @@ func (o *packOptions) Validate() error {
 }
 
 func (o *packOptions) AddFlags(cmd *cobra.Command) {
+	o.outFileOptions.AddFlags(cmd)
 	cmd.PersistentFlags().StringSliceVarP(
 		&o.Bundles,
 		"bundle", "b", []string{}, "path to bundle",
@@ -58,7 +59,7 @@ attestations easier to distribute.
 		SilenceUsage:  false,
 		SilenceErrors: true,
 		Example: fmt.Sprintf(`
-Pack two bundles together in a single file:
+Pack bundles and attestations together in a linear json file:
 
 %s pack --bundle bundle1.json --bundle bundle2.json -o attestations.jsonl 
 
@@ -66,7 +67,13 @@ Same but with shortcut positional arguments:
 
 %s pack -o attestations.jsonl bundle1.json bundle2.json 
 
-`, appname, appname),
+If one of the --bundle paths is a directory, all JSON files found in the 
+directory will be packed into the jsonl file: 
+
+%s pack attestations-dir/ > attestations.jsonl 
+
+
+`, appname, appname, appname),
 		PersistentPreRunE: initLogging,
 		PreRunE: func(_ *cobra.Command, args []string) error {
 			opts.Bundles = append(opts.Bundles, args...)
@@ -96,6 +103,11 @@ Same but with shortcut positional arguments:
 			}
 			tool := bundle.NewTool()
 			for _, path := range opts.Bundles {
+				if util.IsDir(path) {
+					if err := tool.FlattenJSONDirectoryToWriter(path, out); err != nil {
+						return err
+					}
+				}
 				f, err := os.Open(path)
 				if err != nil {
 					return fmt.Errorf("opening %q: %w", path, err)

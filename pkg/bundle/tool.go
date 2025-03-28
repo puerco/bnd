@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 
 	// "github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -119,6 +121,38 @@ func (t *Tool) ExtractAttestationJSON(bundle *protobundle.Bundle) ([]byte, error
 	}
 
 	return dssePayload.DsseEnvelope.Payload, nil
+}
+
+// FlattenJSONDirectoryToWriter flattens all JSON files in a directory
+func (t *Tool) FlattenJSONDirectoryToWriter(path string, w io.Writer) error {
+	dirContents, err := os.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("opening dir: %w", err)
+	}
+
+	for _, entry := range dirContents {
+		if entry.IsDir() {
+			continue
+		}
+
+		if !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+
+		f, err := os.Open(filepath.Join(path, entry.Name()))
+		if err != nil {
+			return fmt.Errorf("opening file: %w", err)
+		}
+		defer f.Close()
+
+		if _, err := io.Copy(w, t.FlattenJSONStream(f)); err != nil {
+			return fmt.Errorf("writing stream")
+		}
+		if _, err := w.Write([]byte("\n")); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // FlattenJSON flattens a JSON document into a single line, suitable to add to
