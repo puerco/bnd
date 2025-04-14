@@ -8,13 +8,11 @@ import (
 	"fmt"
 	"io"
 
-	// "github.com/secure-systems-lab/go-securesystemslib/dsse"
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	"github.com/sirupsen/logrus"
-
 	"github.com/carabiner-dev/ampel/pkg/attestation"
 	ampelb "github.com/carabiner-dev/ampel/pkg/formats/envelope/bundle"
 	"github.com/carabiner-dev/ampel/pkg/formats/statement/intoto"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	"github.com/sirupsen/logrus"
 )
 
 type Tool struct{}
@@ -42,10 +40,10 @@ func (t *Tool) ParseBundle(r io.Reader) (attestation.Envelope, error) {
 // getBundleContentIfDSSE returns the bundle contents if it is wrapped in a DSSE
 // envelope. Returns nil in any other case.
 func getBundleContentIfDSSE(bundle *protobundle.Bundle) *protobundle.Bundle_DsseEnvelope {
-	if bundle.Content == nil {
+	if bundle.GetContent() == nil {
 		return nil
 	}
-	if dsse, ok := bundle.Content.(*protobundle.Bundle_DsseEnvelope); ok {
+	if dsse, ok := bundle.GetContent().(*protobundle.Bundle_DsseEnvelope); ok {
 		return dsse
 	}
 
@@ -115,5 +113,5 @@ func (t *Tool) ExtractAttestationJSON(bundle *protobundle.Bundle) ([]byte, error
 		return nil, fmt.Errorf("bundle has no DSSE payload")
 	}
 
-	return dssePayload.DsseEnvelope.Payload, nil
+	return dssePayload.DsseEnvelope.GetPayload(), nil
 }

@@ -12,12 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/carabiner-dev/bnd/internal/sts"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"golang.org/x/term"
+
+	"github.com/carabiner-dev/bnd/internal/sts"
 )
 
 // BundleSigner abstracts the signer implementation to make it easy to mock

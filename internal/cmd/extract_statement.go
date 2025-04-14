@@ -8,8 +8,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/carabiner-dev/bnd/pkg/bundle"
 	"github.com/spf13/cobra"
+
+	"github.com/carabiner-dev/bnd/pkg/bundle"
 )
 
 type extractAttOptions struct {

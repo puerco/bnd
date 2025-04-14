@@ -8,8 +8,9 @@ import (
 	"fmt"
 
 	ampelb "github.com/carabiner-dev/ampel/pkg/formats/envelope/bundle"
-	"github.com/carabiner-dev/bnd/pkg/bundle"
 	"github.com/spf13/cobra"
+
+	"github.com/carabiner-dev/bnd/pkg/bundle"
 )
 
 type inspectOptions struct {
@@ -44,11 +45,11 @@ data about the bundle.
 		SilenceErrors:     true,
 		PersistentPreRunE: initLogging,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 && opts.bundleOptions.Path != "" && opts.bundleOptions.Path != args[0] {
+			if len(args) > 0 && opts.Path != "" && opts.Path != args[0] {
 				return errors.New("bundle paths specified twice (as argument and flag)")
 			}
 			if len(args) > 0 {
-				opts.bundleOptions.Path = args[0]
+				opts.Path = args[0]
 			}
 			return nil
 		},

@@ -7,8 +7,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/carabiner-dev/bnd/pkg/bnd"
 	"github.com/spf13/cobra"
+
+	"github.com/carabiner-dev/bnd/pkg/bnd"
 )
 
 type verifyOptions struct {

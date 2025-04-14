@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/carabiner-dev/bnd/pkg/bundle"
 	"github.com/spf13/cobra"
+
+	"github.com/carabiner-dev/bnd/pkg/bundle"
 )
 
 type extractPredOptions struct {
@@ -95,7 +96,7 @@ func addExtractPredicate(parentCmd *cobra.Command) {
 				if err != nil {
 					return fmt.Errorf("extracting predicate type: %w", err)
 				}
-				fmt.Fprintln(out, predType)
+				fmt.Fprintln(out, predType) //nolint:errcheck
 				return nil
 			}
 

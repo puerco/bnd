@@ -35,6 +35,7 @@ func (o *outFileOptions) OutputWriter() (io.Writer, func(), error) {
 		return nil, nil, fmt.Errorf("opening utput file: %w", err)
 	}
 
+	//nolint:gosec,errcheck
 	return out, func() { out.Close() }, nil
 }
 
@@ -87,6 +88,7 @@ func (o *bundleOptions) OpenBundle() (io.Reader, func(), error) {
 		return nil, nil, fmt.Errorf("opening bundle file: %w", err)
 	}
 
+	//nolint:errcheck,gosec
 	return f, func() { f.Close() }, nil
 }
 
@@ -100,12 +102,17 @@ func (o *bundleOptions) ReadBundle() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("opening bundle file: %w", err)
 		}
-		defer f.(*os.File).Close() //nolint:errcheck
+		defer func() {
+			fo, ok := f.(*os.File)
+			if ok {
+				fo.Close() //nolint:errcheck,gosec
+			}
+		}()
 	}
 
 	bundle, err := io.ReadAll(f)
 	if err != nil {
-		return nil, fmt.Errorf("reading bundle data: %s", err)
+		return nil, fmt.Errorf("reading bundle data: %w", err)
 	}
 	return bundle, nil
 }

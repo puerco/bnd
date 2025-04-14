@@ -91,7 +91,7 @@ directory will be packed into the jsonl file:
 			out = os.Stdout
 			defer func() {
 				if f, ok := out.(*os.File); ok {
-					f.Close()
+					f.Close() //nolint:errcheck,gosec
 				}
 			}()
 			if opts.OutPath != "" {

@@ -6,11 +6,12 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/carabiner-dev/bnd/pkg/bnd"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/log"
 	"sigs.k8s.io/release-utils/version"
+
+	"github.com/carabiner-dev/bnd/pkg/bnd"
 )
 
 const appname = "bnd"

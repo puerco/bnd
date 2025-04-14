@@ -3,8 +3,9 @@ package cmd
 import (
 	"testing"
 
-	"github.com/carabiner-dev/bnd/internal/git"
 	"github.com/stretchr/testify/require"
+
+	"github.com/carabiner-dev/bnd/internal/git"
 )
 
 func TestVCSBuilder(t *testing.T) {

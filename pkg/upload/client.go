@@ -94,7 +94,7 @@ func (c *Client) pushAttestationToGitHub(org, repo string, r io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("uploading attestation bundle: %w", err)
 	}
-	defer res.Body.Close()
+	defer res.Body.Close() //nolint:errcheck
 
 	logrus.Infof("Response code %d after pushing", res.StatusCode)
 	return nil

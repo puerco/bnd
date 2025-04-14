@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/carabiner-dev/bnd/pkg/upload"
 	"github.com/spf13/cobra"
+
+	"github.com/carabiner-dev/bnd/pkg/upload"
 )
 
 type pushOptions struct {
@@ -31,7 +32,7 @@ func (o *pushOptions) Validate() error {
 }
 
 func (gho *pushGitHubOptions) Validate() error {
-	var errs = []error{}
+	errs := []error{}
 	errs = append(errs, gho.pushOptions.Validate())
 	if gho.RepoName == "" {
 		errs = append(errs, errors.New("repository name not set"))

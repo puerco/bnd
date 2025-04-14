@@ -36,7 +36,7 @@ func (actions *Actions) Provide(ctx context.Context, audience string) (*oauthflo
 		return nil, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s&audience=%s", url, audience), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s&audience=%s", url, audience), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (actions *Actions) Provide(ctx context.Context, audience string) (*oauthflo
 			time.Sleep(time.Second)
 			continue
 		}
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint:errcheck
 
 		var payload struct {
 			Value string `json:"value"`
