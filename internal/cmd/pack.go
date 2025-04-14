@@ -9,7 +9,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/carabiner-dev/bnd/pkg/bundle"
+	"github.com/carabiner-dev/jsonl"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/util"
 )
@@ -101,25 +101,8 @@ directory will be packed into the jsonl file:
 				}
 				out = f
 			}
-			tool := bundle.NewTool()
-			for _, path := range opts.Bundles {
-				if util.IsDir(path) {
-					if err := tool.FlattenJSONDirectoryToWriter(path, out); err != nil {
-						return err
-					}
-				}
-				f, err := os.Open(path)
-				if err != nil {
-					return fmt.Errorf("opening %q: %w", path, err)
-				}
-				if _, err := io.Copy(out, tool.FlattenJSONStream(f)); err != nil {
-					return fmt.Errorf("copying data to file: %w", err)
-				}
-				if _, err := io.WriteString(out, "\n"); err != nil {
-					return err
-				}
-			}
-			return nil
+
+			return jsonl.PackFilesToStream(out, opts.Bundles)
 		},
 	}
 	opts.AddFlags(packCmd)
