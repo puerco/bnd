@@ -36,6 +36,8 @@ Extract the predicate data from the bundle:
 
   bnd extract predicate bundle.json
 
+	
+
 Available Commands:
   commit      attest git commits
   completion  Generate the autocompletion script for the specified shell
@@ -44,8 +46,9 @@ Available Commands:
   inspect     prints useful information about a bundle
   pack        packs one or more bundles into a jsonl formatted file
   predicate   packs a new attestation into a bundle from a JSON predicate
-  push        pushes an attestation or bundle to github or an OCI registry
+  push        pushes an attestation or bundle to a repository
   statement   binds an in-toto attestation in a signed bundle
+  unpack      unpacks attestations bundled in a jsonl file
   verify      Verifies a bundle signature
   version     Prints the version
 
