@@ -17,7 +17,6 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/term"
 
 	"github.com/carabiner-dev/bnd/internal/sts"
@@ -141,12 +140,10 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 		return nil, fmt.Errorf("creating TUF client: %w", err)
 	}
 
-	// Get and configure the TUF root:
-	trustedRoot, err := root.GetTrustedRoot(tufClient)
-	if err != nil {
+	// Call the tuf client to ensure roots are on disk
+	if _, err = root.GetTrustedRoot(tufClient); err != nil {
 		return nil, fmt.Errorf("fetching TUF root: %w", err)
 	}
-	bundleOptions.TrustedRoot = trustedRoot
 
 	// The TUF roots are in the process to be updated, so for now we
 	// use a temporary configuration to point to the sigstore public good
@@ -173,9 +170,6 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 	bundleOptions.CertificateProviderOptions = &sign.CertificateProviderOptions{
 		IDToken: opts.Token.RawString,
 	}
-
-	logrus.Warnf("timestamps are temporarily disabled")
-	opts.Timestamp = false
 
 	if opts.Timestamp {
 		tsaURLs, err := root.SelectServices(
