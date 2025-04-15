@@ -13,9 +13,11 @@ import (
 	"time"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	trustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/term"
 
 	"github.com/carabiner-dev/bnd/internal/sts"
@@ -67,6 +69,64 @@ func (bs *bundleSigner) GetKeyPair(opts *SignerOptions) (*sign.EphemeralKeypair,
 	return keypair, nil
 }
 
+func tempSigningConfigBuilder(opts *SignerOptions) (*root.SigningConfig, error) {
+	// These two are not yet exposed in the SignerOptions
+	fulcioURL := "https://fulcio.sigstore.dev"
+	rekorURL := "https://rekor.sigstore.dev"
+
+	// This is:
+	oidcIssuer := DefaultSignerOptions.OidcIssuer
+	if opts.OidcIssuer != "" {
+		oidcIssuer = opts.OidcIssuer
+	}
+
+	return root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		// Fulcio URLs
+		[]root.Service{
+			{
+				URL:                 fulcioURL,
+				MajorAPIVersion:     1,
+				ValidityPeriodStart: time.Now().Add(-time.Hour),
+				ValidityPeriodEnd:   time.Now().Add(time.Hour),
+			},
+		},
+		// OIDC Issuer
+		[]root.Service{
+			{
+				URL:                 oidcIssuer,
+				MajorAPIVersion:     1,
+				ValidityPeriodStart: time.Now().Add(-time.Hour),
+				ValidityPeriodEnd:   time.Now().Add(time.Hour),
+			},
+		},
+		// Rekor API endpoint
+		[]root.Service{
+			{
+				URL:                 rekorURL,
+				MajorAPIVersion:     1,
+				ValidityPeriodStart: time.Now().Add(-time.Hour),
+				ValidityPeriodEnd:   time.Now().Add(time.Hour),
+			},
+		},
+		root.ServiceConfiguration{
+			Selector: trustroot.ServiceSelector_ANY,
+		},
+		// Timestamp services
+		[]root.Service{
+			{
+				URL:                 "https://timestamp.githubapp.com/api/v1/timestamp",
+				MajorAPIVersion:     1,
+				ValidityPeriodStart: time.Now().Add(-time.Hour),
+				ValidityPeriodEnd:   time.Now().Add(time.Hour),
+			},
+		},
+		root.ServiceConfiguration{
+			Selector: trustroot.ServiceSelector_ANY,
+		},
+	)
+}
+
 // BuildSigstoreSignerOptions builds the signer options by reading the TUF roots
 // and configuration from the local system (or defaults).
 func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.BundleOptions, error) {
@@ -88,9 +148,14 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 	}
 	bundleOptions.TrustedRoot = trustedRoot
 
-	signingConfig, err := root.GetSigningConfig(tufClient)
+	// The TUF roots are in the process to be updated, so for now we
+	// use a temporary configuration to point to the sigstore public good
+	// while it getsa updated:
+	//
+	// signingConfig, err := root.GetSigningConfig(tufClient)
+	signingConfig, err := tempSigningConfigBuilder(opts)
 	if err != nil {
-		return nil, fmt.Errorf("getting signing config from TUF")
+		return nil, fmt.Errorf("getting signing config from TUF: %w", err)
 	}
 
 	if len(signingConfig.FulcioCertificateAuthorityURLs()) == 0 {
@@ -109,10 +174,25 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 		IDToken: opts.Token.RawString,
 	}
 
+	logrus.Warnf("timestamps are temporarily disabled")
+	opts.Timestamp = false
+
 	if opts.Timestamp {
-		for _, tsaURL := range signingConfig.TimestampAuthorityURLs() {
+		tsaURLs, err := root.SelectServices(
+			signingConfig.TimestampAuthorityURLs(),
+			signingConfig.TimestampAuthorityURLsConfig(), []uint32{1}, time.Now(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("fetching time stamp authority URLs: %w", err)
+		}
+
+		if len(tsaURLs) == 0 {
+			return nil, fmt.Errorf("no timestamp authority found in signing config")
+		}
+
+		for _, tsaURL := range tsaURLs {
 			tsaOpts := &sign.TimestampAuthorityOptions{
-				URL:     tsaURL.URL,
+				URL:     tsaURL,
 				Timeout: 30 * time.Second,
 				Retries: 1,
 			}
