@@ -67,10 +67,13 @@ func (bs *bundleSigner) GetKeyPair(opts *SignerOptions) (*sign.EphemeralKeypair,
 	return keypair, nil
 }
 
+// BuildSigstoreSignerOptions builds the signer options by reading the TUF roots
+// and configuration from the local system (or defaults).
 func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.BundleOptions, error) {
 	if opts.Token == nil {
 		return nil, fmt.Errorf("no OIDC token set")
 	}
+
 	// bundleOptions is the options set to configure the sigstore signer
 	bundleOptions := sign.BundleOptions{}
 	tufClient, err := GetTufClient(&opts.TufOptions)
@@ -90,9 +93,13 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 		return nil, fmt.Errorf("getting signing config from TUF")
 	}
 
-	// Config fuilcio
+	if len(signingConfig.FulcioCertificateAuthorityURLs()) == 0 {
+		return nil, fmt.Errorf("unable to read fulcio configuration from TUF client")
+	}
+
+	// Configure the Fulcio client
 	fulcioOpts := &sign.FulcioOptions{
-		BaseURL: signingConfig.FulcioCertificateAuthorityURL(),
+		BaseURL: signingConfig.FulcioCertificateAuthorityURLs()[0].URL,
 		Timeout: 30 * time.Second,
 		Retries: 1,
 	}
@@ -105,7 +112,7 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 	if opts.Timestamp {
 		for _, tsaURL := range signingConfig.TimestampAuthorityURLs() {
 			tsaOpts := &sign.TimestampAuthorityOptions{
-				URL:     tsaURL,
+				URL:     tsaURL.URL,
 				Timeout: 30 * time.Second,
 				Retries: 1,
 			}
@@ -118,7 +125,7 @@ func (bs *bundleSigner) BuildSigstoreSignerOptions(opts *SignerOptions) (*sign.B
 	if opts.AppendToRekor {
 		for _, rekorURL := range signingConfig.RekorLogURLs() {
 			rekorOpts := &sign.RekorOptions{
-				BaseURL: rekorURL,
+				BaseURL: rekorURL.URL,
 				Timeout: 90 * time.Second,
 				Retries: 1,
 			}
