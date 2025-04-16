@@ -6,8 +6,12 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 
+	"github.com/carabiner-dev/ampel/pkg/attestation"
 	ampelb "github.com/carabiner-dev/ampel/pkg/formats/envelope/bundle"
+	"github.com/carabiner-dev/jsonl"
 	"github.com/spf13/cobra"
 
 	"github.com/carabiner-dev/bnd/pkg/bundle"
@@ -66,35 +70,90 @@ data about the bundle.
 			}
 			defer closer()
 
-			tool := bundle.NewTool()
+			fmt.Println("\n🔎  Bundle Details:")
+			fmt.Println("-------------------")
 
-			envelope, err := tool.ParseBundle(reader)
-			if err != nil {
-				return fmt.Errorf("parsing bundle: %w", err)
+			if strings.HasSuffix(opts.Path, ".jsonl") {
+				for i, r := range jsonl.IterateBundle(reader) {
+					if r == nil {
+						fmt.Printf("Unable to parse line #%d\n", i)
+						continue
+					}
+					fmt.Printf("Attestation #%d\n", i)
+					if err := printEnvelopeDetails(r); err != nil {
+						return err
+					}
+				}
+				return nil
 			}
 
-			att, err := tool.ExtractAttestation(envelope)
-			if err != nil {
-				return fmt.Errorf("unable to extract attestation from bundle")
-			}
-
-			mediatype := "unknown"
-			if bndl, ok := envelope.(*ampelb.Envelope); ok {
-				mediatype = bndl.GetMediaType()
-			}
-
-			fmt.Println("\nBundle Details:")
-			fmt.Println("---------------")
-			fmt.Printf("Bundle media type: %s\n", mediatype)
-			if att != nil {
-				fmt.Printf("Attestation predicate: %s\n", att.GetPredicateType())
-			} else {
-				fmt.Println("No attestation found in envelope")
-			}
-			fmt.Println("")
-			return nil
+			// If it's just a single json:
+			return printEnvelopeDetails(reader)
 		},
 	}
 	opts.AddFlags(extractCmd)
 	parentCmd.AddCommand(extractCmd)
+}
+
+func printEnvelopeDetails(reader io.Reader) error {
+	tool := bundle.NewTool()
+
+	// Parse the bundle JSON
+	envelope, err := tool.ParseBundle(reader)
+	if err != nil {
+		if errors.Is(err, attestation.ErrNotCorrectFormat) {
+			fmt.Printf("⚠️  JSON data is not a known envelope format\n\n")
+			return nil
+		}
+		return fmt.Errorf("parsing bundle: %w", err)
+	}
+
+	att, err := tool.ExtractAttestation(envelope)
+	if err != nil {
+		return fmt.Errorf("unable to extract attestation from bundle")
+	}
+
+	mediatype := "unknown"
+	if bndl, ok := envelope.(*ampelb.Envelope); ok {
+		mediatype = bndl.GetMediaType()
+	}
+
+	fmt.Printf("✉️  Envelope Media Type: %s\n", mediatype)
+	fmt.Printf("🔏 Signer identity: [not yet implemented]\n")
+	if att != nil {
+		fmt.Println("📃 Attestation Details:")
+		fmt.Printf("   Predicate Type: %s", att.GetPredicateType())
+		if att.GetPredicateType() == "" {
+			fmt.Print("[not defined]")
+		}
+		fmt.Println("")
+
+		if att.GetSubjects() != nil {
+			fmt.Printf("   Attestation Subjects:\n")
+			for _, s := range att.GetSubjects() {
+				if s.GetName() != "" {
+					fmt.Println("   - " + s.GetName())
+				}
+
+				i := 0
+				for algo, val := range s.GetDigest() {
+					if i == 0 {
+						if s.GetName() == "" {
+							fmt.Print("   - ")
+						} else {
+							fmt.Print("     ")
+						}
+						fmt.Printf("%s: %s\n", algo, val)
+					}
+					i++
+				}
+			}
+		} else {
+			fmt.Println("⚠️ Attestation has no subjects")
+		}
+	} else {
+		fmt.Println("⚠️ No attestation found in envelope")
+	}
+	fmt.Println("")
+	return nil
 }
